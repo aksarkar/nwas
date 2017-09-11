@@ -1,0 +1,50 @@
+#+TITLE: Intermediate phenotype-wide association studies
+#+AUTHOR: Abhishek Sarkar
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:nil c:nil
+#+OPTIONS: creator:comment d:(not "LOGBOOK") date:nil e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
+#+OPTIONS: todo:t |:t
+#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
+#+DESCRIPTION:
+#+EXCLUDE_TAGS: noexport
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+
+This repository contains code related to the paper "Discovery of distal
+expression-mediated genetic effects in T1D" by Sarkar et al.
+
+It builds off of the work described in "[[http://www.biorxiv.org/content/early/2017/02/14/108316][Modeling prediction error improves
+power of transcriptome-wide association studies]]" by Bhutani et al., implemented
+in the [[https://github.com/schork-lab/mediator-was][mediator-was]] package.
+
+* Introduction
+
+We focus on a number of issues which arise in iTWAS. First, existing methods
+assume perfect imputation of gene expression in the target GWAS cohort and do
+not account for uncertainty in those estimates. Theory and simulation show that
+not accounting for uncertainty reduces power to detect associated genes
+(Fuller, 1987; Bhutani et al. 2016). Second, existing methods train
+/cis/-regulatory models one gene at a time, assuming that causal variants are
+within one megabase of their target genes. However, this assumption might not
+be valid: in the case of the /FTO/ obesity GWAS locus, the functionally
+validated causal variant was 1.2 megabases away from its target gene
+(Claussnitzer et al. 2015). Third, existing methods assume /cis/-regulatory
+variants target the closest gene. Again, in the case of /FTO/, the causal gene
+/IRX3/ was not the closest gene to the validated causal variant. Fourth,
+existing methods cannot distinguish true mediation from pleiotropic effects or
+reverse causation (Gusev et al. 2016).
+
+* Installation
+
+  #+BEGIN_SRC sh
+  pip install git+ssh://git@github.com/aksarkar/nwas.git#egg=nwas
+  #+END_SRC
+
+* Dependencies
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - tensorflow
+  - [[https://www.github.com/blei-lab/edward][edward]]
