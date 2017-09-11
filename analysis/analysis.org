@@ -1,0 +1,108 @@
+#+TITLE: Simulation
+#+DATE:
+#+AUTHOR: Abhishek Sarkar
+#+EMAIL: aksarkar@uchicago.edu
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
+#+OPTIONS: todo:t |:t
+#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
+#+DESCRIPTION:
+#+EXCLUDE_TAGS: noexport
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+
+#+BEGIN_SRC python
+  import ctra
+  import edward as ed
+  import numpy
+  import nwas
+  import scipy.special
+  import tensorflow as tf
+
+  Normal = ed.models.Normal
+  SpikeSlab = nwas.model.SpikeSlab
+  GeneticValue = nwas.model.GeneticValue
+
+  # Simulated data
+
+  p = 100
+  n_ref = 500
+  n_gwas = 1000
+
+  with ctra.simulation.simulation(p, .2, [[3, 1]], 0) as s:
+      x_ref, g_ref = s.sample_gaussian(n=n_ref)
+      x_gwas, g_gwas = s.sample_gaussian(n=n_gwas)
+      y_gwas = g_gwas + numpy.sqrt(g_gwas.var() / 0.2) * s.random.normal(size=n_gwas)
+
+  # Model
+
+  ed.set_seed(0)
+
+  # eQTL effects
+  logit_pi_0 = Normal(loc=-numpy.log(p), scale=tf.ones(1))
+  log_tau_0 = Normal(loc=0, scale=tf.ones(1))
+  theta = SpikeSlab(alpha=tf.sigmoid(logit_pi_0),
+                    beta=tf.zeros([p])
+                    gamma=tf.nn.softplus(log_tau_0))
+  eta_ref_m = GeneticValue(x=x_ref, theta=theta)
+  p_g_ref = Normal(loc=eta_ref_m,
+                   scale=tf.nn.softplus(tf.Variable(tf.random_normal([1]))))
+
+  # Mediated gene effects
+  logit_pi_1 = Normal(loc=-numpy.log(p), scale=tf.ones(1))
+  log_tau_1 = Normal(loc=0, scale=tf.ones(1))
+  alpha = SpikeSlab(alpha=tf.sigmoid(logit_pi_1),
+                    beta=tf.zeros([p])
+                    gamma=tf.nn.softplus(log_tau_1))
+  eta_gwas_m = GeneticValue(x=tf.matmul(x_gwas, theta), theta=alpha)
+
+  # Unmediated phenotype effects
+  logit_pi_2 = Normal(loc=-numpy.log(p), scale=tf.ones(1))
+  log_tau_2 = Normal(loc=0, scale=tf.ones(1))
+  phi = SpikeSlab(alpha=tf.sigmoid(logit_pi_2),
+                  beta=tf.zeros([p])
+                  gamma=tf.nn.softplus(log_tau_2))
+  eta_gwas_u = GeneticValue(x=x_gwas, theta=phi)
+  p_y_gwas = Normal(loc=eta_gwas_m + eta_gwas_u,
+                    scale=tf.nn.softplus(tf.Variable(tf.random_normal([1]))))
+
+  # Variational approximation
+  q_logit_pi_0 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_logit_pi_1 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_logit_pi_2 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_log_tau_0 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_log_tau_1 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_log_tau_2 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_eta_ref_m = GeneticValue(x=x_ref, theta=SpikeSlab(
+      alpha=tf.sigmoid(tf.Variable(tf.zeros[p])),
+      beta=tf.Variable(tf.zeros[p]),
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros[p]))))
+  q_eta_gwas_u = GeneticValue(x=x_gwas, theta=SpikeSlab(
+      alpha=tf.sigmoid(tf.Variable(tf.zeros[p])),
+      beta=tf.Variable(tf.zeros[p]),
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros[p]))))
+  q_eta_gwas_m = GeneticValue(x=tf.matmul(x_gwas, theta), theta=SpikeSlab(
+      alpha=tf.sigmoid(tf.Variable(tf.zeros[p])),
+      beta=tf.Variable(tf.zeros[p]),
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros[p]))))
+
+  ed.KLqp(
+      {
+          logit_pi_0: q_log_pi_0,
+          logit_pi_1: q_log_pi_1,
+          logit_pi_2: q_log_pi_2,
+          log_tau_0: q_log_tau_0,
+          log_tau_1: q_log_tau_1,
+          log_tau_2: q_log_tau_2,
+          eta_ref_m: q_eta_ref_m,
+          eta_gwas_u: q_eta_gwas_u,
+          eta_gwas_m: q_eta_gwas_m,
+      },
+      {
+          p_g_ref: g_ref,
+          p_y_gwas: y_gwas,
+      })
+
+#+END_SRC
