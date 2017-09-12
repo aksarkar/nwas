@@ -71,7 +71,6 @@ Set up the model:
   alpha = SpikeSlab(alpha=tf.sigmoid(logit_pi_1),
                     beta=tf.zeros([m, 1]),
                     gamma=tf.nn.softplus(log_tau_1),
-                    value=tf.zeros([p, m]),
   )
   eta_gwas_m = GeneticValue(x=tf.matmul(x_gwas, theta),
                             theta=alpha)
@@ -82,7 +81,6 @@ Set up the model:
   phi = SpikeSlab(alpha=tf.sigmoid(logit_pi_2),
                   beta=tf.zeros([p, 1]),
                   gamma=tf.nn.softplus(log_tau_2),
-                  value=tf.zeros([p, m]),
   )
   eta_gwas_u = GeneticValue(x=x_gwas, theta=phi)
   p_y_gwas = Normal(loc=eta_gwas_m + eta_gwas_u,
@@ -104,21 +102,21 @@ Set up the variational approximation:
                        scale=tf.Variable(tf.random_normal([1])))
   q_log_tau_2 = Normal(loc=tf.Variable(tf.random_normal([1])),
                        scale=tf.Variable(tf.random_normal([1])))
-  q_eta_ref_m = GeneticValue(x=x_ref, theta=SpikeSlab(
-      alpha=tf.sigmoid(tf.Variable(tf.zeros([p, 1]))),
+  q_theta = SpikeSlab(
+      alpha=tf.sigmoid(tf.Variable(tf.zeros([p, m]))),
       beta=tf.Variable(tf.zeros([p, m])),
-      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, 1]))),
-      value=tf.zeros([p, m])))
-  q_eta_gwas_u = GeneticValue(x=x_gwas, theta=SpikeSlab(
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, m]))))
+  q_eta_ref_m = GeneticValue(x=x_ref, theta=q_theta)
+  q_phi = SpikeSlab(
       alpha=tf.sigmoid(tf.Variable(tf.zeros([p, 1]))),
       beta=tf.Variable(tf.zeros([p, 1])),
-      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p]))),
-      value=tf.zeros([p, 1])))
-  q_eta_gwas_m = GeneticValue(x=tf.matmul(x_gwas, theta), theta=SpikeSlab(
-      alpha=tf.sigmoid(tf.Variable(tf.zeros([p, 1]))),
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, 1]))))
+  q_eta_gwas_u = GeneticValue(x=x_gwas, theta=q_phi)
+  q_alpha = SpikeSlab(
+      alpha=tf.sigmoid(tf.Variable(tf.zeros([m, 1]))),
       beta=tf.Variable(tf.zeros([m, 1])),
-      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, 1]))),
-      value=tf.zeros([m, 1])))
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros([m, 1]))))
+  q_eta_gwas_m = GeneticValue(x=tf.matmul(x_gwas, q_theta), theta=q_alpha)
 #+END_SRC
 
 Fit the model:
@@ -126,12 +124,15 @@ Fit the model:
 #+BEGIN_SRC python :tangle example.py
   result = ed.KLqp(
       {
-          logit_pi_0: q_log_pi_0,
-          logit_pi_1: q_log_pi_1,
-          logit_pi_2: q_log_pi_2,
+          logit_pi_0: q_logit_pi_0,
+          logit_pi_1: q_logit_pi_1,
+          logit_pi_2: q_logit_pi_2,
           log_tau_0: q_log_tau_0,
           log_tau_1: q_log_tau_1,
           log_tau_2: q_log_tau_2,
+          theta: q_theta,
+          alpha: q_alpha,
+          phi: q_phi,
           eta_ref_m: q_eta_ref_m,
           eta_gwas_u: q_eta_gwas_u,
           eta_gwas_m: q_eta_gwas_m,
