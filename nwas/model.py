@@ -1,3 +1,4 @@
+import edward as ed
 import tensorflow as tf
 
 from edward.models import RandomVariable
@@ -89,7 +90,7 @@ class GeneticValue(RandomVariable, Distribution):
         self._x = x
         self._theta = theta
 
-        self._dist = edward.models.Normal(
+        self._dist = ed.models.Normal(
             loc=tf.matmul(self._x, self._theta.mean()),
             scale=tf.sqrt(tf.matmul(tf.square(self._x),
                                     self._theta.variance()))
@@ -103,8 +104,11 @@ class GeneticValue(RandomVariable, Distribution):
             validate_args=validate_args,
         )
 
+    def _batch_shape(self):
+        return self._dist._batch_shape()
+
     def _log_prob(self, value):
-        return self._dist.log_prob(value)
+        return self._dist._log_prob(value)
 
     def _sample_n(self, n, seed=None):
-        return self._dist.sample_n(n, seed)
+        return self._dist._sample_n(n, seed)
