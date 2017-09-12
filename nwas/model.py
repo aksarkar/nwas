@@ -91,19 +91,20 @@ class GeneticValue(RandomVariable, Distribution):
                  name='GeneticValue'):
         self._x = x
         self._theta = theta
-        self._dist = tf.contrib.distributions.Normal(loc=tf.matmul(x, theta),
-                                                     scale=theta.stddev())
+        self._dist = tf.contrib.distributions.Normal(
+            loc=tf.matmul(x, theta.mean()),
+            scale=theta.stddev()
+        )
         super(GeneticValue, self).__init__(
             allow_nan_stats=allow_nan_stats,
             dtype=self._theta.dtype,
-            graph_parents=[self._x, self._theta],
             name=name,
             reparameterization_type=FULLY_REPARAMETERIZED,
             validate_args=validate_args,
         )
 
     def _log_prob(self, value):
-        self.dist.log_prob(value)
+        self._dist.log_prob(value)
 
     def _sample_n(self, n, seed=None):
-        self.dist.sample(n, seed)
+        self._dist.sample(n, seed)
