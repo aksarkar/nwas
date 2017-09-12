@@ -11,7 +11,7 @@ from tensorflow.contrib.distributions import (
 )
 
 class SpikeSlab(RandomVariable, Distribution):
-    """Spike-and-slab prior (point-normal mixture; George & Beauchamp XXX).
+    """Spike-and-slab prior (point-normal mixture; Mitchell & Beauchamp 1988).
 
     This is a compound distribution of indicator variables z and values theta.
 
@@ -40,13 +40,6 @@ class SpikeSlab(RandomVariable, Distribution):
                 self._alpha = alpha
                 self._beta = beta
                 self._gamma = gamma
-                self._shape = tf.shape(beta)
-                # if tf.shape(self._alpha) and tf.shape(self._alpha) != self._shape:
-                #     raise ValueError('Shape mismatch: expected {}, got {}'.format(
-                #         self._shape, tf.shape(self._alpha.shape)))
-                # if tf.shape(self._gamma) and tf.shape(self._gamma) != self._shape:
-                #     raise ValueError('Shape mismatch: expected {}, got {}'.format(
-                #         self._shape, tf.shape(self._gamma.shape)))
 
         super(SpikeSlab, self).__init__(
             allow_nan_stats=allow_nan_stats,
@@ -85,7 +78,8 @@ def kl_spikeslab(q, p, name=None):
     """
     kl_qtheta_ptheta = q._alpha * kl_divergence(
         Normal(loc=q._beta, scale=tf.reciprocal(q._gamma)),
-        Normal(loc=p._beta, scale=tf.reciprocal(p._gamma)))
+        Normal(loc=p._beta, scale=tf.reciprocal(p._gamma))
+    )
     kl_qz_pz = q._alpha * kl_divergence(
         BernoulliWithSigmoidProbs(q._alpha),
         BernoulliWithSigmoidProbs(p._alpha)
@@ -95,12 +89,18 @@ def kl_spikeslab(q, p, name=None):
 class GeneticValue(RandomVariable, Distribution):
     def __init__(self, x, theta, validate_args=False, allow_nan_stats=True,
                  name='GeneticValue'):
-        super(GeneticValue, self).__init__(validate_args=validate_args,
-                                           allow_nan_stats=allow_nan_stats,)
-        self.x = x
-        self.theta = theta
-        self.dist = tf.contrib.distributions.Normal(loc=tf.matmul(x, theta),
-                                                    scale=theta.stddev())
+        self._x = x
+        self._theta = theta
+        self._dist = tf.contrib.distributions.Normal(loc=tf.matmul(x, theta),
+                                                     scale=theta.stddev())
+        super(GeneticValue, self).__init__(
+            allow_nan_stats=allow_nan_stats,
+            dtype=self._theta.dtype,
+            graph_parents=[self._x, self._theta],
+            name=name,
+            reparameterization_type=FULLY_REPARAMETERIZED,
+            validate_args=validate_args,
+        )
 
     def _log_prob(self, value):
         self.dist.log_prob(value)
