@@ -9,6 +9,7 @@ from tensorflow.contrib.distributions import (
     RegisterKL,
     kl_divergence,
 )
+from tensorflow.python.ops import array_ops
 
 class SpikeSlab(RandomVariable, Distribution):
     """Spike-and-slab prior (point-normal mixture; Mitchell & Beauchamp 1988).
@@ -33,13 +34,9 @@ class SpikeSlab(RandomVariable, Distribution):
     """
     def __init__(self, alpha, beta, gamma, validate_args=False,
                  allow_nan_stats=True, name='SpikeSlab'):
-        parameters=locals()
-
-        with tf.name_scope(name, values=[alpha, beta, gamma]):
-            with tf.control_dependencies([]):
-                self._alpha = alpha
-                self._beta = beta
-                self._gamma = gamma
+        self._alpha = array_ops.identity(alpha, name="alpha")
+        self._beta = array_ops.identity(beta, name="beta")
+        self._gamma = array_ops.identity(gamma, name="gamma")
 
         super(SpikeSlab, self).__init__(
             allow_nan_stats=allow_nan_stats,
@@ -48,7 +45,7 @@ class SpikeSlab(RandomVariable, Distribution):
             name=name,
             reparameterization_type=FULLY_REPARAMETERIZED,
             validate_args=validate_args,
-            value=tf.zeros_like(self._beta)
+            value=tf.zeros_like(self._beta),
         )
 
     def _log_prob(self, value):

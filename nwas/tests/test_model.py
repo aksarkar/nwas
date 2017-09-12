@@ -94,3 +94,11 @@ def test_spikeslab_kl(tf_session):
                                    beta=tf.convert_to_tensor(beta),
                                    gamma=tf.ones([p, 1]))
     tf_session.run(tf.contrib.distributions.kl_divergence(q_theta, p_theta))
+
+def test_spikeslab_variable():
+    p = 100
+    theta = nwas.model.SpikeSlab(
+        alpha=tf.sigmoid(tf.Variable(tf.zeros([p, 1]))),
+        beta=tf.Variable(tf.random_normal([p, 1])),
+        gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, 1])))
+    )
