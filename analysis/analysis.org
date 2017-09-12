@@ -78,12 +78,18 @@ Set up the model:
 Set up the variational approximation:
 
 #+BEGIN_SRC python :tangle example.py
-  q_logit_pi_0 = Normal(loc=tf.Variable(tf.random_normal([1])))
-  q_logit_pi_1 = Normal(loc=tf.Variable(tf.random_normal([1])))
-  q_logit_pi_2 = Normal(loc=tf.Variable(tf.random_normal([1])))
-  q_log_tau_0 = Normal(loc=tf.Variable(tf.random_normal([1])))
-  q_log_tau_1 = Normal(loc=tf.Variable(tf.random_normal([1])))
-  q_log_tau_2 = Normal(loc=tf.Variable(tf.random_normal([1])))
+  q_logit_pi_0 = Normal(loc=tf.Variable(tf.random_normal([1])),
+                        scale=tf.Variable(tf.random_normal([1])))
+  q_logit_pi_1 = Normal(loc=tf.Variable(tf.random_normal([1])),
+                        scale=tf.Variable(tf.random_normal([1])))
+  q_logit_pi_2 = Normal(loc=tf.Variable(tf.random_normal([1])),
+                        scale=tf.Variable(tf.random_normal([1])))
+  q_log_tau_0 = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+  q_log_tau_1 = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+  q_log_tau_2 = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
   q_eta_ref_m = GeneticValue(x=x_ref, theta=SpikeSlab(
       alpha=tf.sigmoid(tf.Variable(tf.zeros[p, 1])),
       beta=tf.Variable(tf.zeros[p, 1]),
