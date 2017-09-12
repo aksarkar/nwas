@@ -88,10 +88,13 @@ class GeneticValue(RandomVariable, Distribution):
                  name='GeneticValue'):
         self._x = x
         self._theta = theta
-        self._dist = tf.contrib.distributions.Normal(
-            loc=tf.matmul(x, theta.mean()),
-            scale=theta.stddev()
+
+        self._dist = edward.models.Normal(
+            loc=tf.matmul(self._x, self._theta.mean()),
+            scale=tf.sqrt(tf.matmul(tf.square(self._x),
+                                    self._theta.variance()))
         )
+
         super(GeneticValue, self).__init__(
             allow_nan_stats=allow_nan_stats,
             dtype=self._theta.dtype,
@@ -101,7 +104,7 @@ class GeneticValue(RandomVariable, Distribution):
         )
 
     def _log_prob(self, value):
-        self._dist.log_prob(value)
+        return self._dist.log_prob(value)
 
     def _sample_n(self, n, seed=None):
-        self._dist.sample(n, seed)
+        return self._dist.sample_n(n, seed)
