@@ -22,7 +22,7 @@
   import tensorflow as tf
 
   from edward.models import *
-  from nwas.model import SpikeSlab, GeneticValue
+  from nwas.models import *
 #+END_SRC
 
 Simulate some data:
