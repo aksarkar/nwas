@@ -67,6 +67,11 @@ class distribution_SpikeSlab(Distribution):
     def _sample_n(self, n, seed=None):
         raise NotImplementedError("sample_n is not implemented")
 
+    @property
+    def pip(self):
+        with self._name_scope('pip'):
+            return self._alpha
+
     def _mean(self):
         return self._alpha * self._beta
 

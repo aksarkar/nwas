@@ -1,0 +1,106 @@
+#+TITLE: Toy example
+#+DATE: <2017-09-12 Tue>
+#+AUTHOR: Abhishek Sarkar
+#+EMAIL: aksarkar@midway2-login1.rcc.local
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
+#+OPTIONS: todo:t |:t
+#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
+#+DESCRIPTION:
+#+EXCLUDE_TAGS: noexport
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+
+#+BEGIN_SRC python :tangle example.py
+  import edward as ed
+  import matplotlib.pyplot as plt
+  import numpy
+  import nwas
+  import scipy.special
+  import tensorflow as tf
+
+  from edward.models import *
+  from nwas.model import SpikeSlab, GeneticValue
+#+END_SRC
+
+Simulate some data:
+
+#+BEGIN_SRC python :tangle example.py
+  p = 10000
+  n_gwas = 7500
+  n_validate = 1000
+  pve_y = 0.5
+
+  with nwas.simulation.simulation(p, pve_y, [(3, 1)], 0) as s:
+      true_theta = s.theta
+      x_gwas, y_gwas = s.sample_gaussian(n=n_gwas)
+      x_validate, y_validate = s.sample_gaussian(n=n_validate)
+      x_gwas = x_gwas.astype('float32')
+      y_gwas = y_gwas.reshape(-1, 1).astype('float32')
+      x_validate = x_validate.astype('float32')
+      y_validate = y_validate.reshape(-1, 1).astype('float32')
+
+
+#+END_SRC
+
+#+BEGIN_SRC python :tangle example.py
+  logit_pi = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
+  log_tau = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+  theta = SpikeSlab(alpha=tf.sigmoid(logit_pi),
+                    beta=tf.zeros([p, 1]),
+                    gamma=tf.nn.softplus(log_tau),
+  )
+  eta = GeneticValue(x=x_gwas, theta=theta)
+  p_y = NormalWithSoftplusScale(loc=eta,
+                                scale=tf.Variable(tf.zeros([1])))
+#+END_SRC
+
+#+BEGIN_SRC python :tangle example.py
+  q_logit_pi = Normal(loc=tf.Variable(tf.random_normal([1])),
+                        scale=tf.Variable(tf.random_normal([1])))
+  q_log_tau = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+  q_theta = SpikeSlab(
+      alpha=tf.sigmoid(tf.Variable(tf.zeros([p, 1]))),
+      beta=tf.Variable(tf.zeros([p, 1])),
+      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, 1]))))
+  q_eta = GeneticValue(x=x_gwas, theta=q_theta)
+#+END_SRC
+
+
+#+BEGIN_SRC python :tangle example.py
+  inference = ed.ReparameterizationKLKLqp(
+      latent_vars={
+          logit_pi: q_logit_pi,
+          log_tau: q_log_tau,
+          theta: q_theta,
+          eta: q_eta,
+      },
+      data={
+          p_y: y_gwas,
+      })
+
+  inference.run(n_iter=5000, optimizer='rmsprop')
+  session = ed.get_session()
+  pip = session.run(q_theta.pip)
+  est_theta = session.run(q_theta.mean())
+#+END_SRC
+
+#+BEGIN_SRC python :tangle example.py
+  plt.switch_backend('pdf')
+  q = numpy.logical_or(pip > 0.1, true_theta != 0)
+  nq = numpy.count_nonzero(q)
+  fig, ax = plt.subplots(3, 1)
+  fig.set_size_inches(6, 8)
+  plt.xlabel('True and false positive variants')
+  ax[0].bar(range(nq), true_theta[q])
+  ax[0].set_ylabel('True effect size')
+  ax[1].bar(range(nq), est_theta[q])
+  ax[1].set_ylabel('Estimated effect size')
+  ax[2].bar(range(nq), pip[q])
+  ax[2].set_ylabel('PIP')
+  plt.savefig('example')
+  plt.close()
+#+END_SRC

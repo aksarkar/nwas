@@ -45,12 +45,12 @@ Simulate some data:
       x_ref = x_ref.astype('float32')
       g_ref = g_ref.astype('float32')
       x_gwas = x_gwas.astype('float32')
-      y_gwas = y_gwas.astype('float32')
+      y_gwas = y_gwas.reshape(-1, 1).astype('float32')
 #+END_SRC
 
 Set up the model:
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC python :tangle analysis.py
   ed.set_seed(0)
 
   # eQTL effects
@@ -89,7 +89,7 @@ Set up the model:
 
 Set up the variational approximation:
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC python :tangle analysis.py
   q_logit_pi_0 = Normal(loc=tf.Variable(tf.random_normal([1])),
                         scale=tf.Variable(tf.random_normal([1])))
   q_logit_pi_1 = Normal(loc=tf.Variable(tf.random_normal([1])),
@@ -121,9 +121,9 @@ Set up the variational approximation:
 
 Fit the model:
 
-#+BEGIN_SRC python :tangle example.py
-  result = ed.KLqp(
-      {
+#+BEGIN_SRC python :tangle analysis.py
+  inference = ed.ReparameterizationKLKLqp(
+      latent_vars={
           logit_pi_0: q_logit_pi_0,
           logit_pi_1: q_logit_pi_1,
           logit_pi_2: q_logit_pi_2,
@@ -137,8 +137,9 @@ Fit the model:
           eta_gwas_u: q_eta_gwas_u,
           eta_gwas_m: q_eta_gwas_m,
       },
-      {
+      data={
           p_g_ref: g_ref,
           p_y_gwas: y_gwas,
       })
+  inference.initialize(n_iter=5000, optimizer='rmsprop', debug=True)
 #+END_SRC
