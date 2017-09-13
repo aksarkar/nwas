@@ -34,7 +34,7 @@ Simulate some data:
   pve_y = 0.5
 
   with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
-      true_theta = s.theta.reshape(-1, 1)
+      true_w = s.theta.reshape(-1, 1)
       x_gwas, y_gwas = s.sample_gaussian(n=n_gwas)
       x_validate, y_validate = s.sample_gaussian(n=n_validate)
       x_gwas = x_gwas.astype('float32')
@@ -44,58 +44,57 @@ Simulate some data:
 #+END_SRC
 
 #+BEGIN_SRC python :tangle example.py
-  logit_pi = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
-  log_tau = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-  theta = SpikeSlab(alpha=tf.sigmoid(logit_pi),
-                    beta=tf.zeros([p, 1]),
-                    gamma=tf.nn.softplus(log_tau),
+  logodds = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
+  scale = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
+  w = SpikeSlab(logodds=logodds,
+                loc=tf.zeros([p, 1]),
+                scale=scale,
   )
-  eta = GeneticValue(x=x_gwas, theta=theta)
-  p_y = NormalWithSoftplusScale(loc=eta,
-                                scale=tf.Variable(tf.zeros([1])))
+  eta = GeneticValue(x=x_gwas, theta=w)
+  p_y = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
 #+END_SRC
 
 #+BEGIN_SRC python :tangle example.py
-  q_logit_pi = Normal(loc=tf.Variable(tf.random_normal([1])),
-                        scale=tf.Variable(tf.random_normal([1])))
-  q_log_tau = Normal(loc=tf.Variable(tf.random_normal([1])),
-                       scale=tf.Variable(tf.random_normal([1])))
-  q_theta = SpikeSlab(
-      alpha=tf.sigmoid(tf.Variable(tf.zeros([p, 1]))),
-      beta=tf.Variable(tf.zeros([p, 1])),
-      gamma=tf.nn.softplus(tf.Variable(tf.zeros([p, 1]))))
-  q_eta = GeneticValue(x=x_gwas, theta=q_theta)
+  q_logodds = Normal(loc=tf.Variable(tf.random_normal([1])),
+                     scale=tf.Variable(tf.random_normal([1])))
+  q_scale = Normal(loc=tf.Variable(tf.random_normal([1])),
+                   scale=tf.Variable(tf.random_normal([1])))
+  q_w = SpikeSlab(
+      logodds=tf.Variable(tf.zeros([p, 1])),
+      loc=tf.Variable(tf.zeros([p, 1])),
+      scale=tf.Variable(tf.zeros([p, 1])))
+  q_eta = GeneticValue(x=x_gwas, theta=q_w)
 #+END_SRC
 
 #+BEGIN_SRC python :tangle example.py
   inference = ed.ReparameterizationKLKLqp(
       latent_vars={
-          logit_pi: q_logit_pi,
-          log_tau: q_log_tau,
-          theta: q_theta,
+          logodds: q_logodds,
+          scale: q_scale,
+          w: q_w,
           eta: q_eta,
       },
       data={
           p_y: y_gwas,
       })
 
-  inference.run(n_iter=5000, optimizer='rmsprop')
+  inference.run(n_iter=1000, optimizer='rmsprop')
 #+END_SRC
 
 #+BEGIN_SRC python :tangle example.py :exports both :file example.pdf
   session = ed.get_session()
-  pip = session.run(q_theta.pip)
-  est_theta = session.run(q_theta.mean())
+  pip = session.run(q_w.pip)
+  est_w = session.run(q_w.mean())
 
   plt.switch_backend('pdf')
-  q = numpy.logical_or(pip > 0.1, true_theta != 0)
+  q = numpy.logical_or(pip > 0.1, true_w != 0)
   nq = numpy.count_nonzero(q)
   fig, ax = plt.subplots(3, 1)
   fig.set_size_inches(6, 8)
   plt.xlabel('True and false positive variants')
-  ax[0].bar(range(nq), true_theta[q])
+  ax[0].bar(range(nq), true_w[q])
   ax[0].set_ylabel('True effect size')
-  ax[1].bar(range(nq), est_theta[q])
+  ax[1].bar(range(nq), est_w[q])
   ax[1].set_ylabel('Estimated effect size')
   ax[2].bar(range(nq), pip[q])
   ax[2].set_ylabel('PIP')

@@ -6,7 +6,7 @@ from tensorflow.contrib.distributions import (
     BernoulliWithSigmoidProbs,
     Distribution,
     FULLY_REPARAMETERIZED,
-    Normal,
+    NormalWithSoftplusScale,
     RegisterKL,
     kl_divergence,
 )
@@ -18,24 +18,25 @@ from tensorflow.python.ops import (
 class distribution_SpikeSlab(Distribution):
     """Spike-and-slab prior (point-normal mixture; Mitchell & Beauchamp 1988).
 
-    This is a compound distribution of indicator variables z and values theta.
+    The prior is parameterized by logodds, loc, and scale. logodds is
+    transparently sigmoid-transformed. Similarly, scale is transparently
+    softplus-transformed.
 
-    p(theta_j, z_j | pi, tau) = pi N(theta_j; 0, tau^{-1}) +
-                                   (1 - pi) delta(theta_j)
+    p(theta_j | logodds, loc, scale) =
+        sigmoid(logodds) * Normal(loc, softplus(scale)) +
+        (1 - sigmoid(logodds)) * PointMass(theta_j)
 
     We want to use the variational approximation to efficiently estimate the
     posterior w.r.t. this prior. The conjugate mean-field variational
     approximation admits an analytical KL (Carbonetto & Stephens 2012).
 
-    q(theta_j, z_j | alpha, beta, gamma) = alpha_j N(theta_j; beta_j, gamma_j^{-1}) + 
-                                           (1 - \alpha_j) delta(\theta_j)
-
     This implementation does not support sampling (does not scale to high
-    dimensions). Instead, use the local reparameterization trick (see
-    nwas.model.GeneticValue; Kingma, Salimans, & Welling 2015).
+    dimensions). Instead, add a local reparameterization (see
+    nwas.model.GeneticValue) which admits efficient sampling to the model (see
+    Kingma, Salimans, & Welling 2015).
 
     """
-    def __init__(self, alpha, beta, gamma, validate_args=False,
+    def __init__(self, logodds, loc, scale, validate_args=False,
                  allow_nan_stats=False, name='SpikeSlab'):
         # This is needed so that tf.python.ops.distributions.Distribution saves
         # positional arguments. Otherwise, ed.util.random_variables.copy
@@ -43,18 +44,18 @@ class distribution_SpikeSlab(Distribution):
         parameters = locals()
 
         # c.f. ed.models.empirical
-        with tf.name_scope(name, values=[alpha, beta, gamma]):
+        with tf.name_scope(name, values=[logodds, loc, scale]):
             with tf.control_dependencies([]):
-                self._alpha = array_ops.identity(alpha, name="alpha")
-                self._beta = array_ops.identity(beta, name="beta")
-                self._gamma = array_ops.identity(gamma, name="gamma")
-                check_ops.assert_same_float_dtype([self._alpha, self._beta, self._gamma])
+                self._logodds = array_ops.identity(logodds, name="logodds")
+                self._loc = array_ops.identity(loc, name="loc")
+                self._scale = array_ops.identity(scale, name="scale")
+                check_ops.assert_same_float_dtype([self._logodds, self._loc, self._scale])
 
         # c.f. tf.python.ops.distributions.normal.Normal.__init__
         super(distribution_SpikeSlab, self).__init__(
             allow_nan_stats=allow_nan_stats,
-            dtype=self._beta.dtype,
-            graph_parents=[self._alpha, self._beta, self._gamma],
+            dtype=self._loc.dtype,
+            graph_parents=[self._logodds, self._loc, self._scale],
             name=name,
             parameters=parameters,
             reparameterization_type=FULLY_REPARAMETERIZED,
@@ -70,17 +71,18 @@ class distribution_SpikeSlab(Distribution):
     @property
     def pip(self):
         with self._name_scope('pip'):
-            return self._alpha
+            return tf.sigmoid(self._logodds)
 
     def _mean(self):
-        return self._alpha * self._beta
+        return tf.sigmoid(self._logodds) * self._loc
 
     def _stddev(self):
         return tf.sqrt(self.variance())
 
     def _variance(self):
-        return (self._alpha / self._gamma +
-                self._alpha * (1 - self._alpha) * tf.square(self._beta))
+        p = tf.sigmoid(self._logodds)
+        return (p / tf.nn.softplus(self._scale) +
+                p * (1 - p) * tf.square(self._loc))
 
 @RegisterKL(distribution_SpikeSlab, distribution_SpikeSlab)
 def kl_spikeslab(q, p, name=None):
@@ -90,24 +92,24 @@ def kl_spikeslab(q, p, name=None):
     2012. It can be derived using Rasmussen and Williams 2006, Eqs. A.22, A.23
 
     """
-    kl_qtheta_ptheta = q._alpha * kl_divergence(
-        Normal(loc=q._beta, scale=tf.reciprocal(q._gamma)),
-        Normal(loc=p._beta, scale=tf.reciprocal(p._gamma))
+    kl_qtheta_ptheta = tf.sigmoid(q._logodds) * kl_divergence(
+        NormalWithSoftplusScale(loc=q._loc, scale=q._scale),
+        NormalWithSoftplusScale(loc=p._loc, scale=q._scale)
     )
-    kl_qz_pz = q._alpha * kl_divergence(
-        BernoulliWithSigmoidProbs(q._alpha),
-        BernoulliWithSigmoidProbs(p._alpha)
+    kl_qz_pz = tf.sigmoid(q._logodds) * kl_divergence(
+        BernoulliWithSigmoidProbs(q._logodds),
+        BernoulliWithSigmoidProbs(p._logodds)
     )
     return tf.reduce_sum(kl_qtheta_ptheta + kl_qz_pz)
 
 class SpikeSlab(RandomVariable, distribution_SpikeSlab):
     def __init__(self, *args, **kwargs):
-        if 'beta' in kwargs:
-            beta = kwargs['beta']
+        if 'loc' in kwargs:
+            loc = kwargs['loc']
         else:
-            beta = args[1]
+            loc = args[1]
         if 'value' not in kwargs:
-            kwargs['value'] = tf.zeros_like(beta)
+            kwargs['value'] = tf.zeros_like(loc)
         RandomVariable.__init__(self, *args, **kwargs)
 
 class distribution_GeneticValue(Distribution):
