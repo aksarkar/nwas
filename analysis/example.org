@@ -1,7 +1,5 @@
-#+TITLE: Toy example
-#+DATE: <2017-09-12 Tue>
+#+TITLE: Linear regression with spike and slab prior
 #+AUTHOR: Abhishek Sarkar
-#+EMAIL: aksarkar@midway2-login1.rcc.local
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
 #+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
 #+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
@@ -43,6 +41,8 @@ Simulate some data:
       y_validate = y_validate.reshape(-1, 1).astype('float32')
 #+END_SRC
 
+Set up the model:
+
 #+BEGIN_SRC python :tangle example.py
   logodds = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
   scale = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
@@ -53,6 +53,8 @@ Simulate some data:
   eta = GeneticValue(x=x_gwas, theta=w)
   p_y = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
 #+END_SRC
+
+Set up the variational approximation:
 
 #+BEGIN_SRC python :tangle example.py
   q_logodds = Normal(loc=tf.Variable(tf.random_normal([1])),
@@ -65,6 +67,8 @@ Simulate some data:
       scale=tf.Variable(tf.zeros([p, 1])))
   q_eta = GeneticValue(x=x_gwas, theta=q_w)
 #+END_SRC
+
+Fit the approximation:
 
 #+BEGIN_SRC python :tangle example.py
   inference = ed.ReparameterizationKLKLqp(
@@ -80,6 +84,8 @@ Simulate some data:
 
   inference.run(n_iter=1000, optimizer='rmsprop')
 #+END_SRC
+
+Plot the fit:
 
 #+BEGIN_SRC python :tangle example.py :exports both :file example.pdf
   session = ed.get_session()
