@@ -33,16 +33,14 @@ Simulate some data:
   n_validate = 1000
   pve_y = 0.5
 
-  with nwas.simulation.simulation(p, pve_y, [(3, 1)], 0) as s:
-      true_theta = s.theta
+  with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
+      true_theta = s.theta.reshape(-1, 1)
       x_gwas, y_gwas = s.sample_gaussian(n=n_gwas)
       x_validate, y_validate = s.sample_gaussian(n=n_validate)
       x_gwas = x_gwas.astype('float32')
       y_gwas = y_gwas.reshape(-1, 1).astype('float32')
       x_validate = x_validate.astype('float32')
       y_validate = y_validate.reshape(-1, 1).astype('float32')
-
-
 #+END_SRC
 
 #+BEGIN_SRC python :tangle example.py
@@ -69,7 +67,6 @@ Simulate some data:
   q_eta = GeneticValue(x=x_gwas, theta=q_theta)
 #+END_SRC
 
-
 #+BEGIN_SRC python :tangle example.py
   inference = ed.ReparameterizationKLKLqp(
       latent_vars={
@@ -83,12 +80,13 @@ Simulate some data:
       })
 
   inference.run(n_iter=5000, optimizer='rmsprop')
+#+END_SRC
+
+#+BEGIN_SRC python :tangle example.py :exports both :file example.pdf
   session = ed.get_session()
   pip = session.run(q_theta.pip)
   est_theta = session.run(q_theta.mean())
-#+END_SRC
 
-#+BEGIN_SRC python :tangle example.py
   plt.switch_backend('pdf')
   q = numpy.logical_or(pip > 0.1, true_theta != 0)
   nq = numpy.count_nonzero(q)
