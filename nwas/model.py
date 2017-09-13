@@ -150,6 +150,14 @@ class distribution_GeneticValue(Distribution):
     def _sample_n(self, n, seed=None):
         return self._dist._sample_n(n, seed)
 
+@RegisterKL(distribution_GeneticValue, distribution_GeneticValue)
+def kl_geneticvalue(q, p, name=None):
+    """Dummy KL divergence between genetic values
+
+    """
+    return 0.0
+
 class GeneticValue(RandomVariable, distribution_GeneticValue):
     def __init__(self, *args, **kwargs):
         RandomVariable.__init__(self, *args, **kwargs)
+
