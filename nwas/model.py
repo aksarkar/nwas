@@ -36,7 +36,7 @@ class distribution_SpikeSlab(Distribution):
 
     """
     def __init__(self, alpha, beta, gamma, validate_args=False,
-                 allow_nan_stats=True, name='SpikeSlab'):
+                 allow_nan_stats=False, name='SpikeSlab'):
         # This is needed so that tf.python.ops.distributions.Distribution saves
         # positional arguments. Otherwise, ed.util.random_variables.copy
         # blows up
@@ -122,7 +122,7 @@ class distribution_GeneticValue(Distribution):
     evaluate E_q[ln p(x | ...)].
 
     """
-    def __init__(self, x, theta, validate_args=False, allow_nan_stats=True,
+    def __init__(self, x, theta, validate_args=False, allow_nan_stats=False,
                  name='GeneticValue'):
         self._x = x
         self._theta = theta
