@@ -44,16 +44,16 @@ Simulate some data:
 Set up the model:
 
 #+BEGIN_SRC python :tangle example.py
-  x=tf.placeholder(tf.float32)
+  x = tf.placeholder(tf.float32)
   logodds = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
   scale = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
   w = SpikeSlab(logodds=logodds,
                 loc=tf.zeros([p, 1]),
                 scale=scale,
   )
-  eta = LocalReparameterization(
-      ed.models.Normal(loc=tf.matmul(x, w.mean()),
-                       scale=tf.sqrt(tf.matmul(tf.square(x), w.variance()))))
+  # This is a dummy which gets swapped out in inference. It only needs to have
+  # the correct shape
+  eta = LocalReparameterization(ed.models.Normal(tf.matmul(x, w), 1.0))
   y = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
 #+END_SRC
 
