@@ -1,0 +1,213 @@
+#+TITLE: Proposed model
+#+AUTHOR: Abhishek Sarkar
+#+EMAIL: aksarkar@uchicago.edu
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
+#+OPTIONS: todo:t |:t
+#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
+#+DESCRIPTION:
+#+EXCLUDE_TAGS: noexport
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+
+* Simulation setup
+
+  - Generate random genotypes in linkage equilibrium
+
+  - Generate Gaussian gene expression from a linear model (PVE = 0.5)
+
+  #+BEGIN_LaTeX
+  \[ w_j \mid \text{causal} ~ N(0, 1) \]
+  \[ g^0_{ik} \mid \text{causal} ~ x^0 w + e \]
+  #+END_LaTeX
+
+  - Generate non-causal gene expression by sampling from a Gaussian with scale
+    equal to the simulated expression phenotypic variance.
+
+  \[ g_{ik} \mid \text{not causal} ~ N(0, V[g \mid \causal]) \]
+
+  - Generate GWAS genotypes and expression from the same linear model
+
+  \[ g^1_{ik} \mid \text{causal} ~ x^1 w + e \]
+
+  - Generate Gaussian phenotypes by adding noise to get the desired PVE.
+
+  \[ y^1 \mid N(g^1 v, \sigma^2) \]
+
+  #+BEGIN_SRC python :tangle model.py :exports none
+  import edward as ed
+  import numpy
+  import nwas
+  import scipy.special
+  import tensorflow as tf
+
+  from edward.models import *
+  from nwas.models import *
+
+  p = 100  # Number of SNPs
+  m = 10  # Number of genes
+  n_ref = 500
+  n_gwas = 10000
+  pve_g = 0.5
+  pve_y = 0.01
+
+  with nwas.simulation.simulation(p, pve_g, [(3, 1)], 0) as s:
+      x_ref, g_ref = s.sample_gaussian(n=n_ref)
+      g_noise = s.random.normal(scale=numpy.sqrt(s.pheno_var), size=(n_ref, m - 1))
+      g_ref = numpy.hstack((g_ref.reshape(-1, 1), g_noise))
+      x_gwas, g_gwas = s.sample_gaussian(n=n_gwas)
+
+      # True effect size of 1
+      y_gwas = g_gwas + s.random.normal(scale=numpy.sqrt(g_gwas.var() * (1 / pve_y - 1)), size=n_gwas)
+      y_gwas -= y_gwas.mean()
+
+      x_ref = x_ref.astype('float32')
+      g_ref = g_ref.astype('float32')
+      x_gwas = x_gwas.astype('float32')
+      y_gwas = y_gwas.reshape(-1, 1).astype('float32')
+  #+END_SRC
+
+* Ordinary TWAS
+
+  #+BEGIN_SRC python :tangle model.py :exports results
+  import sklearn.linear_model
+
+  print('TWAS results:')
+  m0 = sklearn.linear_model.ElasticNetCV().fit(x_ref, g_ref[:,0])
+  print('Expression score = {:.3f}'.format(m0.score(x_ref, g_ref[:,0])))
+  m1 = sklearn.linear_model.LinearRegression().fit(m0.predict(x_gwas).reshape(-1, 1), y_gwas)
+  print('Phenotype score = {:.3f}'.format(m1.score(m0.predict(x_gwas).reshape(-1, 1), y_gwas)))
+  #+END_SRC
+
+* Joint model
+
+  #+BEGIN_SRC python :tangle model.py
+  ed.set_seed(0)
+
+  # Data
+  x0 = tf.placeholder(tf.float32)
+  x1 = tf.placeholder(tf.float32)
+
+  # eQTL effects
+  logodds_w = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
+  scale_w = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+  w = SpikeSlab(logodds=logodds_w, loc=tf.zeros([p, m]), scale=scale_w)
+  # This is a dummy which gets swapped out in the inference
+  eta0 = LocalReparameterization(Normal(tf.matmul(x0, w), 1.0))
+  g0 = NormalWithSoftplusScale(
+      loc=eta0, scale=tf.Variable(tf.random_normal([1])))
+
+  # Mediated gene effects
+  logodds_v = Normal(loc=-numpy.log(m).astype('float32'), scale=tf.ones(1))
+  scale_v = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+  v = SpikeSlab(logodds=tf.Variable(-numpy.log(m).astype('float32')),
+                loc=tf.zeros([m, 1]), scale=tf.Variable(0.0))
+  eta1 = LocalReparameterization(Normal(tf.matmul(tf.matmul(x1, w), v), 1.0))
+  y1 = NormalWithSoftplusScale(loc=eta1, scale=tf.Variable(0.0))
+  #+END_SRC
+
+* Variational approximation
+
+  #+BEGIN_SRC python :tangle model.py
+  q_logodds_w = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+  q_logodds_v = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+  q_scale_w = Normal(loc=tf.Variable(tf.random_normal([1])),
+                     scale=tf.Variable(tf.random_normal([1])))
+  q_scale_v = Normal(loc=tf.Variable(tf.random_normal([1])),
+                     scale=tf.Variable(tf.random_normal([1])))
+
+  q_w = SpikeSlab(logodds=tf.Variable(tf.zeros([p, m])),
+                  loc=tf.Variable(tf.random_normal([p, m])),
+                  scale=tf.Variable(tf.zeros([p, m])))
+  q_eta0 = LocalReparameterization(
+      Normal(loc=tf.matmul(x0, q_w.mean()),
+             scale=tf.sqrt(tf.matmul(tf.square(x0), q_w.variance()))))
+  #+END_SRC
+
+  We need to do some work to get the reparameterized distribution \(q(X w
+  v)\). As previously derived (Brown 1977), if b, c are \(n\)-dimensional
+  Gaussian then:
+
+  \[ E[b' c] = E[b]' E[c] \]
+
+  \[ V[b' c] = E[b]' Cov(c, c) E[b] + E[c]' Cov(b, b) + E[c] \]
+
+  Here, we need moments of a stochastic matrix-vector product. However, under the
+  variational approximation, all of the elements are independent, simplifying the
+  derivation. Let \(\eta = X w\). Then considering each row \(\eta_i\), we can
+  simply apply the above result to get:
+
+  \[ E_q[\eta_i v] = E_q[\eta_i] E_q[v] \]
+
+  \[ V_q[\eta_i v] = E_q[\eta_i] \diag(V_q[v]) E_q[\eta_i]' + E_q[v]' \diag(V_q[\eta_i]) E_q[v] \]
+
+  #+BEGIN_SRC python :tangle model.py
+  q_v = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
+                  loc=tf.Variable(tf.random_normal([m, 1])),
+                  scale=tf.Variable(tf.zeros([m, 1])))
+  # Conviently keep the necessary mean and variance around
+  q_eta1 = Normal(loc=tf.matmul(x1, q_w.mean()),
+                  scale=tf.sqrt(tf.matmul(tf.square(x1), q_w.variance())))
+  var = (tf.reduce_sum(tf.square(q_eta1.mean()) *
+                       tf.transpose(q_v.variance()), axis=1, keep_dims=True) +
+         tf.reduce_sum(tf.transpose(tf.square(q_v.mean())) *
+                       q_eta1.variance(), axis=1, keep_dims=True))
+  q_eta1m = LocalReparameterization(
+      Normal(loc=tf.matmul(tf.matmul(x1, q_w.mean()), q_v.mean()),
+             scale=tf.sqrt(var)))
+  #+END_SRC
+
+* Model fitting
+
+  #+BEGIN_SRC python :tangle model.py
+  inference = ed.ReparameterizationKLKLqp(
+      latent_vars={
+          logodds_w: q_logodds_w,
+          logodds_v: q_logodds_v,
+          scale_w: q_scale_w,
+          scale_v: q_scale_v,
+          w: q_w,
+          v: q_v,
+          eta0: q_eta0,
+          eta1m: q_eta1m,
+      },
+      data={
+          x0: x_ref,
+          g0: g_ref,
+          x1: x_gwas,
+          y1: y_gwas,
+      })
+  inference.run(n_iter=1000, optimizer='rmsprop')
+  #+END_SRC
+* Limitations
+
+  Suppose we generated data from both mediated and unmediated effects:
+
+  \[ y^1 = x^1 w v + x^1 u + e \]
+
+  If we jointly fit mediated and unmediated effects in the model, unmediated
+  effects explain away the mediated effects. Unclear whether this happens
+  because the simulation is trivial, so that \(w\) and \(v\) really can
+  co-adapt.
+
+  If we leave unmediated effects out, but require that \(w\) explains the gene
+  expression observations, then can we accurately estimate \(v\) assuming that
+  \(u\) is uncorrelated with \(v\)?
+
+  Of course, \(u\) correlated with \(v\) is the well studied pleiotropy problem
+  in Mendelian randomization.
+
+  To make causal claims, we further need to remove /trans/-effects and reverse
+  causal effects on gene expression.
+
+  We can do the first using half-sibling regression (regress observed genes
+  expression against control gene expression, where control genes are on other
+  chromosomes).
+
+  We can do the second using a random effects approach. Suppose we regress gene
+  expression against phenotype, assuming a linear mixed model where the kernel
+  matrix is built on the rest of the genome.

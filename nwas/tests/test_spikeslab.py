@@ -49,6 +49,18 @@ def test_spikeslab_variance(tf_session):
         assert var.shape == (p, 1)
         assert numpy.isclose(var, 0.5 / numpy.log(2) + .25 * loc * loc).all()
 
+def test_matrix_spikeslab_variance(tf_session):
+    p = 100
+    m = 10
+    for _ in range(50):
+        loc = numpy.random.normal(size=(p, m)).astype('float32')
+        theta = SpikeSlab(logodds=tf.zeros([p, m]),
+                          loc=tf.convert_to_tensor(loc),
+                          scale=tf.zeros([p, m]))
+        var = tf_session.run(theta.variance())
+        assert var.shape == (p, m)
+        assert numpy.isclose(var, 0.5 / numpy.log(2) + .25 * loc * loc).all()
+
 def test_spikeslab_scalar_hyperparams():
     p = 100
     theta = SpikeSlab(logodds=tf.zeros([1]),
