@@ -51,7 +51,9 @@ Set up the model:
                 loc=tf.zeros([p, 1]),
                 scale=scale,
   )
-  eta = GeneticValue(x=x, theta=w)
+  eta = LocalReparameterization(
+      ed.models.Normal(loc=tf.matmul(x, w.mean()),
+                       scale=tf.sqrt(tf.matmul(tf.square(x), w.variance()))))
   y = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
 #+END_SRC
 
@@ -66,7 +68,9 @@ Set up the variational approximation:
       logodds=tf.Variable(tf.zeros([p, 1])),
       loc=tf.Variable(tf.zeros([p, 1])),
       scale=tf.Variable(tf.zeros([p, 1])))
-  q_eta = GeneticValue(x=x, theta=q_w)
+  q_eta = LocalReparameterization(
+      ed.models.Normal(loc=tf.matmul(x, q_w.mean()),
+      scale=tf.sqrt(tf.matmul(tf.square(x), q_w.variance()))))
 #+END_SRC
 
 Fit the approximation:
