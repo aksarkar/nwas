@@ -27,16 +27,16 @@ Simulate some data:
 
 #+BEGIN_SRC python :tangle example.py
   p = 10000
-  n_gwas = 7500
+  n_train = 7500
   n_validate = 1000
   pve_y = 0.5
 
   with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
       true_w = s.theta.reshape(-1, 1)
-      x_gwas, y_gwas = s.sample_gaussian(n=n_gwas)
+      x_train, y_train = s.sample_gaussian(n=n_train)
       x_validate, y_validate = s.sample_gaussian(n=n_validate)
-      x_gwas = x_gwas.astype('float32')
-      y_gwas = y_gwas.reshape(-1, 1).astype('float32')
+      x_train = x_train.astype('float32')
+      y_train = y_train.reshape(-1, 1).astype('float32')
       x_validate = x_validate.astype('float32')
       y_validate = y_validate.reshape(-1, 1).astype('float32')
 #+END_SRC
@@ -44,14 +44,15 @@ Simulate some data:
 Set up the model:
 
 #+BEGIN_SRC python :tangle example.py
+  x=tf.placeholder(tf.float32)
   logodds = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
   scale = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
   w = SpikeSlab(logodds=logodds,
                 loc=tf.zeros([p, 1]),
                 scale=scale,
   )
-  eta = GeneticValue(x=x_gwas, theta=w)
-  p_y = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
+  eta = GeneticValue(x=x, theta=w)
+  y = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
 #+END_SRC
 
 Set up the variational approximation:
@@ -65,7 +66,7 @@ Set up the variational approximation:
       logodds=tf.Variable(tf.zeros([p, 1])),
       loc=tf.Variable(tf.zeros([p, 1])),
       scale=tf.Variable(tf.zeros([p, 1])))
-  q_eta = GeneticValue(x=x_gwas, theta=q_w)
+  q_eta = GeneticValue(x=x, theta=q_w)
 #+END_SRC
 
 Fit the approximation:
@@ -79,7 +80,8 @@ Fit the approximation:
           eta: q_eta,
       },
       data={
-          p_y: y_gwas,
+          x: x_train,
+          y: y_train,
       })
 
   inference.run(n_iter=1000, optimizer='rmsprop')
@@ -106,4 +108,20 @@ Plot the fit:
   ax[2].set_ylabel('PIP')
   plt.savefig('example')
   plt.close()
+#+END_SRC
+
+Check the fit. We can't do this using ~ed.copy~ because the copied nodes remain
+in the graph (unlike the way it works in Theano), so we can't feed in data of
+different shapes.
+
+#+BEGIN_SRC python :tangle example.py
+  def correlation_score(y_true, y_pred):
+      R = 1 - (tf.reduce_sum(tf.square(y_true - y_pred)) /
+               tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true))))
+      return ed.get_session().run(R)
+
+  print('Training set score = {:.3f}'.format(
+      correlation_score(y_train, session.run(q_eta.mean(), {x: x_train}))))
+  print('Validation set score = {:.3f}'.format(
+      correlation_score(y_validate, session.run(q_eta.mean(), {x: x_validate}))))
 #+END_SRC
