@@ -1,0 +1,260 @@
+#+TITLE: Modeling uncorrelated, unmediated effects
+#+AUTHOR: Abhishek Sarkar
+#+EMAIL: aksarkar@uchicago.edu
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
+#+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
+#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
+#+OPTIONS: todo:t |:t
+#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
+#+DESCRIPTION:
+#+EXCLUDE_TAGS: noexport
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+
+* Introduction
+
+  Suppose we generate phenotypes from both mediated and unmediated effects:
+
+  \[ y^1 = x^1 w v + x^1 u + e \]
+
+  If we jointly fit mediated and unmediated effects in the model, will
+  unmediated effects explain away the true mediated effects?
+
+  We hypothesize that requiring \(w\) to also explain the gene expression
+  observations, will allow us to accurately estimate \(v\) even when \(u\) is
+  correlated with \(v\). In this case, \(w\) and \(v\) cannot co-adapt
+  arbitrarily.
+
+* Simulation setup
+
+  - Generate random genotypes in linkage equilibrium
+
+  - Generate Gaussian gene expression from a linear model (PVE = 0.5)
+
+  #+BEGIN_LaTeX
+  \[ w_j \mid \text{causal} ~ N(0, 1) \]
+  \[ g^0_{ik} \mid \text{causal} ~ x^0 w + e \]
+  #+END_LaTeX
+
+  - Generate non-causal gene expression by sampling from a Gaussian with scale
+    equal to the simulated expression phenotypic variance.
+
+  \[ g_{ik} \mid \text{not causal} ~ N(0, V[g \mid \causal]) \]
+
+  - Generate GWAS genotypes and expression from the same linear model
+
+  \[ g^1_{ik} \mid \text{causal} ~ x^1 w + e \]
+
+  - Generate unmediated effects
+
+  \[ u \mid \text{causal} = N(0, 1) \]
+
+  - Generate Gaussian phenotypes by adding noise to get the desired PVE.
+
+  \[ y^1 \mid N(g^1 v + x^1 u, \sigma^2) \]
+
+  #+BEGIN_SRC python :tangle unmediated.py :exports none
+    import edward as ed
+    import numpy
+    import nwas
+    import scipy.special
+    import tensorflow as tf
+
+    from edward.models import *
+    from nwas.models import *
+
+    p = 100  # Number of SNPs
+    m = 10  # Number of genes
+    n_ref = 500
+    n_gwas = 10000
+    pve_g = 0.5
+    pve_y = 0.01
+
+    with nwas.simulation.simulation(p, pve_g, [(3, 1)], 0) as s:
+        x_ref, g_ref = s.sample_gaussian(n=n_ref)
+        g_noise = s.random.normal(scale=numpy.sqrt(s.pheno_var), size=(n_ref, m - 1))
+        g_ref = numpy.hstack((g_ref.reshape(-1, 1), g_noise))
+        x_gwas, g_gwas = s.sample_gaussian(n=n_gwas)
+
+        # True mediated effect size of 1
+        y_gwas = numpy.copy(g_gwas)
+        # Pleiotropic (unmediated) effects
+        u = numpy.zeros(p)
+        causal = s.theta != 0
+        u[causal] = numpy.random.normal(size=causal.sum())
+        y_gwas += x_gwas.dot(u)
+        # Add residual
+        y_gwas += s.random.normal(scale=numpy.sqrt(y_gwas.var() * (1 / pve_y - 1)), size=n_gwas)
+        # Center
+        y_gwas -= y_gwas.mean()
+
+        x_ref = x_ref.astype('float32')
+        g_ref = g_ref.astype('float32')
+        x_gwas = x_gwas.astype('float32')
+        y_gwas = y_gwas.reshape(-1, 1).astype('float32')
+  #+END_SRC
+
+* Joint model
+
+  #+BEGIN_SRC python :tangle model.py
+    ed.set_seed(0)
+
+    # Data
+    x0 = tf.placeholder(tf.float32)
+    x1 = tf.placeholder(tf.float32)
+
+    # eQTL effects
+    logodds_w = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+    scale_w = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+    w = SpikeSlab(logodds=logodds_w, loc=tf.zeros([p, m]), scale=scale_w)
+    # This is a dummy which gets swapped out in the inference
+    eta0 = LocalReparameterization(Normal(tf.matmul(x0, w), 1.0))
+    g0 = NormalWithSoftplusScale(
+        loc=eta0, scale=tf.Variable(tf.random_normal([1])))
+
+    # Mediated gene effects
+    logodds_v = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+    scale_v = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+    v = SpikeSlab(logodds=logodds_v, loc=tf.zeros([m, 1]), scale=scale_v)
+    eta1m = LocalReparameterization(Normal(tf.matmul(tf.matmul(x1, w), v), 1.0))
+
+    # Unmediated effects
+    logodds_u = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+    scale_u = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+    u = SpikeSlab(logodds=logodds_u, loc=tf.zeros([p, 1]), scale=scale_u)
+    eta1u = LocalReparameterization(Normal(tf.matmul(x1, u), 1.0))
+
+    y1 = NormalWithSoftplusScale(loc=eta1m + eta1u, scale=tf.Variable(0.0))
+  #+END_SRC
+
+* Variational approximation
+
+  #+BEGIN_SRC python :tangle model.py
+    q_logodds_w = Normal(loc=tf.Variable(tf.random_normal([1])),
+                         scale=tf.Variable(tf.random_normal([1])))
+    q_logodds_v = Normal(loc=tf.Variable(tf.random_normal([1])),
+                         scale=tf.Variable(tf.random_normal([1])))
+    q_logodds_u = Normal(loc=tf.Variable(tf.random_normal([1])),
+                         scale=tf.Variable(tf.random_normal([1])))
+    q_scale_w = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+    q_scale_v = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+    q_scale_u = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+
+    import scipy.linalg
+    initial_w, *_ = scipy.linalg.lstsq(x_ref, g_ref)
+
+    q_w = SpikeSlab(logodds=tf.Variable(tf.zeros([p, m])),
+                    loc=tf.Variable(initial_w.astype('float32')),
+                    scale=tf.Variable(tf.zeros([p, m])))
+    q_eta0 = LocalReparameterization(
+        Normal(loc=tf.matmul(x0, q_w.mean()),
+               scale=tf.sqrt(tf.matmul(tf.square(x0), q_w.variance()))))
+  #+END_SRC
+
+  We need to do some work to get the reparameterized distribution \(q(X w
+  v)\). As previously derived (Brown 1977), if b, c are \(n\)-dimensional
+  Gaussian then:
+
+  \[ E[b' c] = E[b]' E[c] \]
+
+  \[ V[b' c] = E[b]' Cov(c, c) E[b] + E[c]' Cov(b, b) + E[c]  + \Tr(Cov(b, b) Cov(c, c)) \]
+
+  Here, we need moments of a stochastic matrix-vector product. However, under the
+  variational approximation, all of the elements are independent, simplifying the
+  derivation. Let \(\eta = X w\). Then considering each row \(\eta_i\), we can
+  simply apply the above result to get:
+
+  \[ E_q[\eta_i v] = E_q[\eta_i] E_q[v] \]
+
+  \[ V_q[\eta_i v] = E_q[\eta_i] \diag(V_q[v]) E_q[\eta_i]' + E_q[v]' \diag(V_q[\eta_i]) E_q[v] + V_q[\eta_i]' V_q[v] \]
+
+  #+BEGIN_SRC python :tangle model.py
+    q_v = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
+                    loc=tf.Variable(tf.random_normal([m, 1])),
+                    scale=tf.Variable(tf.zeros([m, 1])))
+    # Conviently keep the necessary mean and variance around
+    q_eta1 = Normal(loc=tf.matmul(x1, q_w.mean()),
+                    scale=tf.sqrt(tf.matmul(tf.square(x1), q_w.variance())))
+    var = (tf.reduce_sum(tf.square(q_eta1.mean()) *
+                         tf.transpose(q_v.variance()), axis=1, keep_dims=True) +
+           tf.reduce_sum(tf.transpose(tf.square(q_v.mean())) *
+                         q_eta1.variance(), axis=1, keep_dims=True) +
+           tf.matmul(q_eta1.variance(), q_v.variance()))
+    q_eta1m = LocalReparameterization(
+        Normal(loc=tf.matmul(tf.matmul(x1, q_w.mean()), q_v.mean()),
+               scale=tf.sqrt(var)))
+
+    q_u = SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
+                    loc=tf.Variable(tf.zeros([p, 1])),
+                    scale=tf.Variable(tf.zeros([p, 1])))
+    q_eta1u = LocalReparameterization(
+        Normal(loc=tf.matmul(x1, q_u),
+               scale=tf.sqrt(tf.matmul(tf.square(x1), q_u.variance()))))
+  #+END_SRC
+
+* Model fitting
+
+  #+BEGIN_SRC python :tangle model.py
+    inference = ed.ReparameterizationKLKLqp(
+        latent_vars={
+            logodds_w: q_logodds_w,
+            logodds_v: q_logodds_v,
+            logodds_u: q_logodds_u,
+            scale_w: q_scale_w,
+            scale_v: q_scale_v,
+            scale_u: q_scale_u,
+            w: q_w,
+            v: q_v,
+            eta0: q_eta0,
+            eta1m: q_eta1m,
+            eta1u: q_eta1u,
+        },
+        data={
+            x0: x_ref,
+            g0: g_ref,
+            x1: x_gwas,
+            y1: y_gwas,
+        })
+    inference.run(n_iter=2000, optimizer='rmsprop')
+  #+END_SRC
+* Model evaluation
+
+  #+BEGIN_SRC python :tangle model.py
+    import matplotlib.gridspec
+    import matplotlib.pyplot as plt
+
+    sess = ed.get_session()
+    w = sess.run(q_w.pip)
+    v = sess.run(q_v.pip)
+
+    plt.switch_backend('pdf')
+    gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[100, 1])
+    fig = plt.gcf()
+    fig.set_size_inches(8, 2)
+    plt.clf()
+    plt.subplot(gs[0])
+    plt.imshow(w.T, cmap='Greys')
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_xlabel('Variants')
+    ax.set_ylabel('Genes')
+
+    plt.subplot(gs[1])
+    plt.imshow(v, cmap='Greys')
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_ylabel('Genes')
+    plt.savefig('coefficients')
+    plt.close()
+  #+END_SRC
+
