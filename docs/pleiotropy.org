@@ -22,9 +22,15 @@
   we accurately estimate \(v\) even if \(u\) is correlated with \(v\)?
 
   It is biologically plausible for a variant to have both a mediated and an
-  unmediated effect? Do we have any documented examples of this? Can we
-  eliminate this possibility by considering a large enough region of the genome
-  (enough genes)?
+  unmediated effect?
+
+  Do we have any documented examples of this?
+
+  Can we estimate how much variance is explained by unmediated effects?
+
+  Can we eliminate this possibility by considering a large enough region of the
+  genome (enough genes)? Can we eliminate it by regressing out the rest of the
+  genome?
 
 * Simulation setup
 
@@ -42,18 +48,19 @@
 
   \[ g_{ik} \mid \text{not causal} ~ N(0, V[g \mid \causal]) \]
 
-  - Generate GWAS genotypes and expression from the same linear model
+  - Generate GWAS expression from the same linear model
 
   \[ g^1_{ik} \mid \text{causal} ~ x^1 w + e \]
 
   - Generate pleiotropic unmediated effect (same variant, independent
-    effect). Scale to get the desired PVE.
+    effect on phenotype). Scale to get the desired PVE.
 
-  \[ u \mid \text{causal} = N(0, V[x^1 w]) \]
+  \[ u \mid \text{causal} = N(0, 1) \]
 
-  - Generate Gaussian phenotypes by adding noise to get the desired PVE.
+  - Generate Gaussian phenotypes using the unmediated effect and adding noise
+    to get the desired PVE.
 
-  \[ y^1 \mid N(g^1 v + x^1 u, \sigma^2) \]
+  \[ y^1 \mid N(x^1 u, \sigma^2) \]
 
   #+BEGIN_SRC python :tangle pleiotropy.py :exports none
     import edward as ed
@@ -70,8 +77,7 @@
     n_ref = 500
     n_gwas = 10000
     pve_g = 0.5
-    pve_u = 0.01  # Proportion of phenotypic variance explained by unmediated effects
-    pve_m = 0.01
+    pve_y = 0.01  # Proportion of phenotypic variance explained by unmediated effects
 
     with nwas.simulation.simulation(p, pve_g, [(3, 1)], 0) as s:
         x_ref, g_ref = s.sample_gaussian(n=n_ref)
@@ -79,17 +85,14 @@
         g_ref = numpy.hstack((g_ref.reshape(-1, 1), g_noise))
         x_gwas, g_gwas = s.sample_gaussian(n=n_gwas)
 
-        # True mediated effect size of 1
-        y_gwas = numpy.copy(g_gwas)
-
         # Pleiotropic (unmediated) effects
-        u = numpy.zeros(p)
+        true_u = numpy.zeros(p)
         causal = s.theta != 0
-        u[causal] = numpy.random.normal(scale=numpy.sqrt(y_gwas.var()), size=causal.sum())
-        y_gwas += x_gwas.dot(u)
+        true_u[causal] = numpy.random.normal(size=causal.sum())
+        y_gwas = x_gwas.dot(true_u)
 
         # Add residual
-        y_gwas += s.random.normal(scale=numpy.sqrt(y_gwas.var() * (1 / (pve_u + pve_m) - 1)), size=n_gwas)
+        y_gwas += s.random.normal(scale=numpy.sqrt(y_gwas.var() * (1 / pve_y - 1)), size=n_gwas)
 
         # Center
         y_gwas -= y_gwas.mean()
@@ -98,9 +101,6 @@
         g_ref = g_ref.astype('float32')
         x_gwas = x_gwas.astype('float32')
         y_gwas = y_gwas.reshape(-1, 1).astype('float32')
-
-        print('Mediated PVE = {:.3f}'.format(g_gwas.var() / y_gwas.var()))
-        print('Unmediated PVE = {:.3f}'.format(x_gwas.dot(u).var() / y_gwas.var()))
   #+END_SRC
 
 * Joint model
@@ -113,7 +113,7 @@
     x1 = tf.placeholder(tf.float32)
 
     # eQTL effects
-    Hm, if it were n and nlogodds_w = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+    logodds_w = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
     scale_w = Normal(loc=tf.zeros(1), scale=tf.ones(1))
     w = SpikeSlab(logodds=logodds_w, loc=tf.zeros([p, m]), scale=scale_w)
     # This is a dummy which gets swapped out in the inference
@@ -124,10 +124,16 @@
     # Mediated gene effects
     logodds_v = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
     scale_v = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-    v = SpikeSlab(logodds=tf.Variable(-numpy.log(m).astype('float32')),
-                  loc=tf.zeros([m, 1]), scale=tf.Variable(0.0))
-    eta1 = LocalReparameterization(Normal(tf.matmul(tf.matmul(x1, w), v), 1.0))
-    y1 = NormalWithSoftplusScale(loc=eta1, scale=tf.Variable(0.0))
+    v = SpikeSlab(logodds=logodds_v, loc=tf.zeros([m, 1]), scale=scale_v)
+    eta1m = LocalReparameterization(Normal(tf.matmul(tf.matmul(x1, w), v), 1.0))
+
+    # Unmediated effects
+    logodds_u = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+    scale_u = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+    u = SpikeSlab(logodds=logodds_u, loc=tf.zeros([p, 1]), scale=scale_u)
+    eta1u = LocalReparameterization(Normal(tf.matmul(x1, u), 1.0))
+
+    y1 = NormalWithSoftplusScale(loc=eta1m + eta1u, scale=tf.Variable(0.0))
   #+END_SRC
 
 * Variational approximation
@@ -137,13 +143,20 @@
                          scale=tf.Variable(tf.random_normal([1])))
     q_logodds_v = Normal(loc=tf.Variable(tf.random_normal([1])),
                          scale=tf.Variable(tf.random_normal([1])))
+    q_logodds_u = Normal(loc=tf.Variable(tf.random_normal([1])),
+                         scale=tf.Variable(tf.random_normal([1])))
     q_scale_w = Normal(loc=tf.Variable(tf.random_normal([1])),
                        scale=tf.Variable(tf.random_normal([1])))
     q_scale_v = Normal(loc=tf.Variable(tf.random_normal([1])),
                        scale=tf.Variable(tf.random_normal([1])))
+    q_scale_u = Normal(loc=tf.Variable(tf.random_normal([1])),
+                       scale=tf.Variable(tf.random_normal([1])))
+
+    import scipy.linalg
+    initial_w, *_ = scipy.linalg.lstsq(x_ref, g_ref)
 
     q_w = SpikeSlab(logodds=tf.Variable(tf.zeros([p, m])),
-                    loc=tf.Variable(tf.random_normal([p, m])),
+                    loc=tf.Variable(initial_w.astype('float32')),
                     scale=tf.Variable(tf.zeros([p, m])))
     q_eta0 = LocalReparameterization(
         Normal(loc=tf.matmul(x0, q_w.mean()),
@@ -156,7 +169,7 @@
 
   \[ E[b' c] = E[b]' E[c] \]
 
-  \[ V[b' c] = E[b]' Cov(c, c) E[b] + E[c]' Cov(b, b) + E[c] \]
+  \[ V[b' c] = E[b]' Cov(c, c) E[b] + E[c]' Cov(b, b) + E[c]  + \Tr(Cov(b, b) Cov(c, c)) \]
 
   Here, we need moments of a stochastic matrix-vector product. However, under the
   variational approximation, all of the elements are independent, simplifying the
@@ -165,7 +178,7 @@
 
   \[ E_q[\eta_i v] = E_q[\eta_i] E_q[v] \]
 
-  \[ V_q[\eta_i v] = E_q[\eta_i] \diag(V_q[v]) E_q[\eta_i]' + E_q[v]' \diag(V_q[\eta_i]) E_q[v] \]
+  \[ V_q[\eta_i v] = E_q[\eta_i] \diag(V_q[v]) E_q[\eta_i]' + E_q[v]' \diag(V_q[\eta_i]) E_q[v] + V_q[\eta_i]' V_q[v] \]
 
   #+BEGIN_SRC python :tangle pleiotropy.py
     q_v = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
@@ -177,10 +190,18 @@
     var = (tf.reduce_sum(tf.square(q_eta1.mean()) *
                          tf.transpose(q_v.variance()), axis=1, keep_dims=True) +
            tf.reduce_sum(tf.transpose(tf.square(q_v.mean())) *
-                         q_eta1.variance(), axis=1, keep_dims=True))
-    q_eta1 = LocalReparameterization(
+                         q_eta1.variance(), axis=1, keep_dims=True) +
+           tf.matmul(q_eta1.variance(), q_v.variance()))
+    q_eta1m = LocalReparameterization(
         Normal(loc=tf.matmul(tf.matmul(x1, q_w.mean()), q_v.mean()),
                scale=tf.sqrt(var)))
+
+    q_u = SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
+                    loc=tf.Variable(tf.zeros([p, 1])),
+                    scale=tf.Variable(tf.zeros([p, 1])))
+    q_eta1u = LocalReparameterization(
+        Normal(loc=tf.matmul(x1, q_u),
+               scale=tf.sqrt(tf.matmul(tf.square(x1), q_u.variance()))))
   #+END_SRC
 
 * Model fitting
@@ -190,12 +211,15 @@
         latent_vars={
             logodds_w: q_logodds_w,
             logodds_v: q_logodds_v,
+            logodds_u: q_logodds_u,
             scale_w: q_scale_w,
             scale_v: q_scale_v,
+            scale_u: q_scale_u,
             w: q_w,
             v: q_v,
             eta0: q_eta0,
-            eta1: q_eta1,
+            eta1m: q_eta1m,
+            eta1u: q_eta1u,
         },
         data={
             x0: x_ref,
@@ -212,61 +236,90 @@
     import matplotlib.pyplot as plt
 
     sess = ed.get_session()
-    w = sess.run(q_w.pip)
-    v = sess.run(q_v.pip)
+    est_w = sess.run(q_w.pip)
+    est_v = sess.run(q_v.pip)
+    est_u = sess.run(q_u.pip)
 
     plt.switch_backend('pdf')
-    gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[100, 1])
+    gs = matplotlib.gridspec.GridSpec(2, 2, width_ratios=[100, 1])
+    norm = matplotlib.colors.NoNorm(0, 1)
     fig = plt.gcf()
     fig.set_size_inches(8, 2)
     plt.clf()
     plt.subplot(gs[0])
-    plt.imshow(w.T, cmap='Greys')
+    plt.imshow(est_w.T, cmap='Greys', norm=norm)
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_xlabel('')
+    ax.set_ylabel('Genes')
+
+    plt.subplot(gs[1])
+    plt.imshow(est_v, cmap='Greys', norm=norm)
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+
+    plt.subplot(gs[2])
+    plt.imshow(est_u.T, cmap='Greys', norm=norm)
     ax = plt.gca()
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_xlabel('Variants')
-    ax.set_ylabel('Genes')
 
-    plt.subplot(gs[1])
-    plt.imshow(v, cmap='Greys')
-    ax = plt.gca()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_ylabel('Genes')
-    plt.savefig('coefficients')
+    plt.savefig('coefficients-pleiotropy')
     plt.close()
   #+END_SRC
 
+file:coefficients-pleiotropy.pdf
 * Limitations
 
-  Suppose we generated data from both mediated and unmediated effects:
-
-  \[ y^1 = x^1 w v + x^1 u + e \]
-
-  If we jointly fit mediated and unmediated effects in the model, unmediated
-  effects explain away the mediated effects. Unclear whether this happens
-  because the simulation is trivial, so that \(w\) and \(v\) really can
-  co-adapt.
-
-  If we leave unmediated effects out, but require that \(w\) explains the gene
-  expression observations, then can we accurately estimate \(v\) assuming that
-  \(u\) is uncorrelated with \(v\)?
-
-  Of course, \(u\) correlated with \(v\) is the well studied pleiotropy problem
+  \(u\) correlated with \(v\) is the well studied pleiotropy problem
   in Mendelian randomization.
 
-  To make causal claims, we further need to remove /trans/-effects and reverse
-  causal effects on gene expression.
+  Unfortunately, prior work (by others, and us!) on this problem suggests it
+  can't be solved in one model. Starting from the Mendelian randomization
+  perspective: if the goal is to estimate the causal effect \(v\), then we have
+  to first estimate \(w\), then estimate \(v\) fixing \(X w\).
 
-  We can do the first using half-sibling regression (regress observed genes
+  Now, in the case where \(u\) is correlated with \(v\), this method is biased
+  and requires correction. The relevant method is [[https://www.ncbi.nlm.nih.gov/pubmed/26050253][MR-Egger]], which has also been
+  extended to [[https://arxiv.org/abs/1708.00272][multivariate case]]. The key idea is to fit weighted least squares,
+  where the weights come from the standard error of the direct associations.
+
+  \[ (w v + u) = w \tilde{v} + b \]
+
+  Open questions:
+ 
+  1. If instruments are correlated (thinking about strong LD within a locus),
+     what breaks in MR-Egger?
+  2. If we replace OLS with a posterior mean assuming the spike-and-slab
+     prior, what happens?
+  3. The key assumption (INSIDE) is that \(Cov(w v, u) = 0\). Is this plausible
+     for the case of /cis/-regulatory variants within a single locus?
+  4. The multivariate extension still requires an independence assumption
+     between the different mediators. If we fit it using SSB, what happens?
+
+  To make causal claims (about mediation), we further need to remove
+  /trans/-effects and reverse causal effects on gene expression.
+
+  We can do the first using half-sibling regression: regress observed genes
   expression against control gene expression, where control genes are on other
-  chromosomes).
+  chromosomes.
 
   We can do the second using a random effects approach. Suppose we regress gene
-  expression against phenotype, assuming a linear mixed model where the kernel
-  matrix is built on the rest of the genome.
+  expression against both genotype and phenotype, assuming a linear mixed
+  model. Treat genotype effects as random by building a kernel matrix the rest
+  of the genome, and treat expression effects as fixed (estimated).
+
+  This could be done using BSLMM, or variational BSLMM as hinted by Peter.
+
+  This still assumes gene expression is Gaussian. It should be trivial to build
+  a negative binomial observation model over a latent linear model using
+  Edward.
