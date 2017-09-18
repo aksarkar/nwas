@@ -19,10 +19,10 @@
   \[ y^1 = x^1 w v + x^1 u + e \]
 
   If we jointly fit mediated and unmediated effects in the model, will
-  unmediated effects explain away the true mediated effects?
+  uncorrelated, unmediated effects explain away the true mediated effects?
 
   We hypothesize that requiring \(w\) to also explain the gene expression
-  observations, will allow us to accurately estimate \(v\) even when \(u\) is
+  observations will allow us to accurately estimate \(v\) even when \(u\) is
   correlated with \(v\). In this case, \(w\) and \(v\) cannot co-adapt
   arbitrarily.
 
@@ -46,9 +46,9 @@
 
   \[ g^1_{ik} \mid \text{causal} ~ x^1 w + e \]
 
-  - Generate unmediated effects
+  - Generate uncorrelated, unmediated effects
 
-  \[ u \mid \text{causal} = N(0, 1) \]
+  \[ u \mid \text{causal, not eQTL} = N(0, 1) \]
 
   - Generate Gaussian phenotypes by adding noise to get the desired PVE.
 
@@ -65,13 +65,15 @@
     from nwas.models import *
 
     p = 100  # Number of SNPs
+    p_eqtl = 3
+    p_unmediated = 3
     m = 10  # Number of genes
     n_ref = 500
     n_gwas = 10000
     pve_g = 0.5
     pve_y = 0.01
 
-    with nwas.simulation.simulation(p, pve_g, [(3, 1)], 0) as s:
+    with nwas.simulation.simulation(p, pve_g, [(p_eqtl, 1)], 0) as s:
         x_ref, g_ref = s.sample_gaussian(n=n_ref)
         g_noise = s.random.normal(scale=numpy.sqrt(s.pheno_var), size=(n_ref, m - 1))
         g_ref = numpy.hstack((g_ref.reshape(-1, 1), g_noise))
@@ -79,13 +81,18 @@
 
         # True mediated effect size of 1
         y_gwas = numpy.copy(g_gwas)
+
         # Pleiotropic (unmediated) effects
-        u = numpy.zeros(p)
-        causal = s.theta != 0
-        u[causal] = numpy.random.normal(size=causal.sum())
-        y_gwas += x_gwas.dot(u)
+        true_u = numpy.zeros(p)
+        true_u[numpy.where(s.theta == 0)[0][:p_unmediated]] = numpy.random.normal(size=p_unmediated)
+        y_gwas += x_gwas.dot(true_u)
+
         # Add residual
         y_gwas += s.random.normal(scale=numpy.sqrt(y_gwas.var() * (1 / pve_y - 1)), size=n_gwas)
+
+        print('Mediated PVE = {:.3f}'.format(g_gwas.var() / y_gwas.var()))
+        print('Unmediated PVE = {:.3f}'.format(x_gwas.dot(true_u).var() / y_gwas.var()))
+
         # Center
         y_gwas -= y_gwas.mean()
 
@@ -97,7 +104,7 @@
 
 * Joint model
 
-  #+BEGIN_SRC python :tangle model.py
+  #+BEGIN_SRC python :tangle unmediated.py
     ed.set_seed(0)
 
     # Data
@@ -130,7 +137,7 @@
 
 * Variational approximation
 
-  #+BEGIN_SRC python :tangle model.py
+  #+BEGIN_SRC python :tangle unmediated.py
     q_logodds_w = Normal(loc=tf.Variable(tf.random_normal([1])),
                          scale=tf.Variable(tf.random_normal([1])))
     q_logodds_v = Normal(loc=tf.Variable(tf.random_normal([1])),
@@ -153,26 +160,6 @@
     q_eta0 = LocalReparameterization(
         Normal(loc=tf.matmul(x0, q_w.mean()),
                scale=tf.sqrt(tf.matmul(tf.square(x0), q_w.variance()))))
-  #+END_SRC
-
-  We need to do some work to get the reparameterized distribution \(q(X w
-  v)\). As previously derived (Brown 1977), if b, c are \(n\)-dimensional
-  Gaussian then:
-
-  \[ E[b' c] = E[b]' E[c] \]
-
-  \[ V[b' c] = E[b]' Cov(c, c) E[b] + E[c]' Cov(b, b) + E[c]  + \Tr(Cov(b, b) Cov(c, c)) \]
-
-  Here, we need moments of a stochastic matrix-vector product. However, under the
-  variational approximation, all of the elements are independent, simplifying the
-  derivation. Let \(\eta = X w\). Then considering each row \(\eta_i\), we can
-  simply apply the above result to get:
-
-  \[ E_q[\eta_i v] = E_q[\eta_i] E_q[v] \]
-
-  \[ V_q[\eta_i v] = E_q[\eta_i] \diag(V_q[v]) E_q[\eta_i]' + E_q[v]' \diag(V_q[\eta_i]) E_q[v] + V_q[\eta_i]' V_q[v] \]
-
-  #+BEGIN_SRC python :tangle model.py
     q_v = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
                     loc=tf.Variable(tf.random_normal([m, 1])),
                     scale=tf.Variable(tf.zeros([m, 1])))
@@ -198,7 +185,7 @@
 
 * Model fitting
 
-  #+BEGIN_SRC python :tangle model.py
+  #+BEGIN_SRC python :tangle unmediated.py
     inference = ed.ReparameterizationKLKLqp(
         latent_vars={
             logodds_w: q_logodds_w,
@@ -223,38 +210,56 @@
   #+END_SRC
 * Model evaluation
 
-  #+BEGIN_SRC python :tangle model.py
+  #+BEGIN_SRC python :tangle unmediated.py
     import matplotlib.gridspec
     import matplotlib.pyplot as plt
 
     sess = ed.get_session()
-    w = sess.run(q_w.pip)
-    v = sess.run(q_v.pip)
+    est_w = sess.run(q_w.pip)
+    est_v = sess.run(q_v.pip)
+    est_u = sess.run(q_u.pip)
 
     plt.switch_backend('pdf')
-    gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[100, 1])
+    gs = matplotlib.gridspec.GridSpec(2, 2, width_ratios=[100, 1])
+    norm = matplotlib.colors.NoNorm(0, 1)
     fig = plt.gcf()
     fig.set_size_inches(8, 2)
     plt.clf()
     plt.subplot(gs[0])
-    plt.imshow(w.T, cmap='Greys')
+    plt.imshow(est_w.T, cmap='Greys', norm=norm)
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_xlabel('')
+    ax.set_ylabel('Genes')
+
+    plt.subplot(gs[1])
+    plt.imshow(est_v, cmap='Greys', norm=norm)
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+
+    plt.subplot(gs[2])
+    plt.imshow(est_u.T, cmap='Greys', norm=norm)
     ax = plt.gca()
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_xlabel('Variants')
-    ax.set_ylabel('Genes')
 
-    plt.subplot(gs[1])
-    plt.imshow(v, cmap='Greys')
-    ax = plt.gca()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_ylabel('Genes')
-    plt.savefig('coefficients')
+    plt.savefig('coefficients-unmediated')
     plt.close()
   #+END_SRC
 
+file:coefficients-unmediated.pdf
+* Conclusions
+
+  Including uncorrelated unmediated effects in the model doesn't affect
+  inference of mediated effects. This isn't surprising since in this case it's
+  valid to put them in the residual (following the GLM assumption that the
+  residual is uncorrelated with the predictors).
