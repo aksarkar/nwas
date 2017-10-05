@@ -14,7 +14,7 @@
 
   Run a remote ~ipython3~ kernel on ~midway2~, then connect to it locally using
   [[https://github.com/gregsexton/ob-ipython][ob-ipython]]. On the ~org-mode~ side, we need to name the connection file for the
-  kernel in such a way that ~ob-ipthon~ recognizes it.
+  kernel in such a way that ~ob-ipython~ recognizes it.
 
   #+BEGIN_SRC shell
   source activate nwas

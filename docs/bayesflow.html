@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-10-04 Wed 19:26 -->
+<!-- 2017-10-04 Wed 22:03 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Spike-and-slab regression in Bayesflow</title>
@@ -248,7 +248,7 @@ for the JavaScript code in this tag.
 <p>
 Run a remote <code>ipython3</code> kernel on <code>midway2</code>, then connect to it locally using
 <a href="https://github.com/gregsexton/ob-ipython">ob-ipython</a>. On the <code>org-mode</code> side, we need to name the connection file for the
-kernel in such a way that <code>ob-ipthon</code> recognizes it.
+kernel in such a way that <code>ob-ipython</code> recognizes it.
 </p>
 
 <div class="org-src-container">
@@ -300,7 +300,9 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
 <h2 id="orgfb72c2c"><span class="section-number-2">3</span> Build up the stochastic graph</h2>
 <div class="outline-text-2" id="text-3">
 <div class="org-src-container">
-<pre><code class="src src-ipython"><span style="color: #0000ee;">stoch_samples</span> = 10
+<pre><code class="src src-ipython">tf.reset_default_graph()
+
+<span style="color: #0000ee;">stoch_samples</span> = 50
 <span style="color: #0000ee;">x_ph</span> = tf.placeholder(tf.float32)
 <span style="color: #0000ee;">y_ph</span> = tf.placeholder(tf.float32)
 
@@ -311,7 +313,7 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
                                  scale=tf.Variable(tf.zeros([p, 1])))
 
 <span style="color: #0000ee;">p_residual_scale</span> = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
-<span style="color: #0000ee;">p_logodds</span> = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
+<span style="color: #0000ee;">p_logodds</span> = ds.Normal(loc=tf.constant(-5.), scale=tf.ones([1]))
 <span style="color: #0000ee;">p_scale</span> = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
 <span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">This has to be defined after the variational part because variational</span>
 <span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">surrogates for hyperparameters appear in the KL term for this distribution</span>
@@ -340,9 +342,6 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
     }
 
 <span style="color: #0000ee;">elbo</span> = tf.reduce_mean(tf.reduce_sum(bf.variational_inference.elbo(llik, approx), axis=[1, 2]))
-<span style="color: #0000ee;">training_rmse</span>, <span style="color: #0000ee;">update_training_rmse</span> = tf.contrib.metrics.root_mean_squared_error(
-    predictions=eta.distribution.mean(),
-    labels=y_ph)
 </code></pre>
 </div>
 </div>
@@ -352,8 +351,9 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
 <h2 id="org0cbfb66"><span class="section-number-2">4</span> Optimize the variational objective</h2>
 <div class="outline-text-2" id="text-4">
 <div class="org-src-container">
-<pre><code class="src src-ipython"><span style="color: #0000ee;">optimizer</span> = tf.train.RMSPropOptimizer(learning_rate=0.1)
+<pre><code class="src src-ipython"><span style="color: #0000ee;">optimizer</span> = tf.train.RMSPropOptimizer(learning_rate=0.01)
 <span style="color: #0000ee;">train</span> = optimizer.minimize(-elbo, var_list=tf.trainable_variables())
+<span style="color: #0000ee;">saver</span> = tf.train.Saver(var_list=tf.trainable_variables())
 </code></pre>
 </div>
 
@@ -361,13 +361,20 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
 <pre><code class="src src-ipython"><span style="color: #00cd00;">with</span> tf.Session() <span style="color: #00cd00;">as</span> sess:
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
-    <span style="color: #00cd00;">for</span> i <span style="color: #00cd00;">in</span> <span style="color: #00cd00;">range</span>(1000):
-        <span style="color: #0000ee;">_</span>, <span style="color: #0000ee;">_</span>, <span style="color: #0000ee;">elbo_val</span>, <span style="color: #0000ee;">training_rmse_val</span> = sess.run(
-            [train, update_training_rmse, tf.convert_to_tensor(loss), training_rmse],
+    <span style="color: #00cd00;">for</span> i <span style="color: #00cd00;">in</span> <span style="color: #00cd00;">range</span>(2000):
+        <span style="color: #0000ee;">_</span>, <span style="color: #0000ee;">elbo_val</span> = sess.run([train, tf.convert_to_tensor(elbo)],
             feed_dict={x_ph: x_train, y_ph: y_train})
         <span style="color: #00cd00;">if</span> <span style="color: #00cd00;">not</span> i % 100:
-            <span style="color: #00cd00;">print</span>(i, elbo_val, training_rmse_val)
-    <span style="color: #0000ee;">opt</span> = sess.run([q_theta.mean()])
+            <span style="color: #00cd00;">print</span>(i, elbo_val)
+    <span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">GLM coefficient of determination</span>
+    <span style="color: #0000ee;">R</span> = 1 - tf.reduce_sum(tf.square(y_ph - eta.mean())) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+    <span style="color: #0000ee;">training_score</span> = sess.run(R, {x_ph: x_train, y_ph: y_train})
+    <span style="color: #0000ee;">validation_score</span> = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
+    <span style="color: #0000ee;">opt</span> = sess.run([tf.nn.sigmoid(q_theta._logodds),
+                    q_theta.mean(),
+                    tf.nn.sigmoid(q_logodds.mean()),
+                    q_logodds.variance(),
+                    tf.nn.softplus(q_residual_scale.mean())])
 </code></pre>
 </div>
 </div>
@@ -375,7 +382,7 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-10-04 Wed 19:26</p>
+<p class="date">Created: 2017-10-04 Wed 22:03</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
