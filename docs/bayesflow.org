@@ -1,0 +1,146 @@
+#+TITLE: Spike-and-slab regression in Bayesflow
+#+AUTHOR: Abhishek Sarkar
+#+EMAIL: aksarkar@uchicago.edu
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
+#+OPTIONS: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
+#+OPTIONS: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
+#+OPTIONS: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+#+CREATOR: Emacs 25.1.1 (Org mode 9.1.1)
+
+* Setup
+
+  Run a remote ~ipython3~ kernel on ~midway2~, then connect to it locally using
+  [[https://github.com/gregsexton/ob-ipython][ob-ipython]]. On the ~org-mode~ side, we need to name the connection file for the
+  kernel in such a way that ~ob-ipthon~ recognizes it.
+
+  #+BEGIN_SRC shell
+  source activate nwas
+  rm -f $HOME/.local/share/jupyter/runtime/kernel-aksarkar.json
+  sbatch --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
+  #!/bin/bash
+  ipython3 kernel --ip=$(hostname -i) -f kernel-aksarkar.json
+  #+END_SRC
+
+  #+RESULTS:
+  : Submitted batch job 37067624
+
+  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results none
+  import nwas
+  import tensorflow as tf
+
+  from nwas.models.spikeslab import distribution_SpikeSlab
+
+  bf = tf.contrib.bayesflow
+  ds = tf.contrib.distributions
+  st = bf.stochastic_tensor
+  #+END_SRC
+
+* Simulate some data
+
+  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results raw drawer
+  p = 1000
+  n_train = 500
+  n_validate = 500
+  pve_y = 0.5
+
+  with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
+      true_w = s.theta.reshape(-1, 1)
+      x_train, y_train = s.sample_gaussian(n=n_train)
+      x_validate, y_validate = s.sample_gaussian(n=n_validate)
+      x_train = x_train.astype('float32')
+      x_validate = x_validate.astype('float32')
+      y_train = y_train.reshape(-1, 1).astype('float32')
+      y_validate = y_validate.reshape(-1, 1).astype('float32')
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Build up the stochastic graph  
+
+  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results raw drawer
+    tf.reset_default_graph()
+
+    stoch_samples = 50
+    x_ph = tf.placeholder(tf.float32)
+    y_ph = tf.placeholder(tf.float32)
+
+    q_logodds = ds.Normal(loc=tf.Variable(tf.zeros([1])), scale=tf.Variable(tf.ones([1])))
+    q_scale = ds.Normal(loc=tf.Variable(tf.zeros([1])), scale=tf.Variable(tf.ones([1])))
+    q_theta = distribution_SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
+                                     loc=tf.Variable(tf.zeros([p, 1])),
+                                     scale=tf.Variable(tf.zeros([p, 1])))
+
+    p_residual_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
+    p_logodds = ds.Normal(loc=tf.constant(-5.), scale=tf.ones([1]))
+    p_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
+    # This has to be defined after the variational part because variational
+    # surrogates for hyperparameters appear in the KL term for this distribution
+    p_theta = distribution_SpikeSlab(logodds=q_logodds.mean(),
+                                     loc=tf.zeros([p, 1]),
+                                     scale=q_scale.mean())
+
+    with st.value_type(st.SampleValue(stoch_samples)):
+        # The residual scale needs an explicit shape since it needs to be broadcast on
+        # the middle dimension
+        q_residual_scale = st.StochasticTensor(ds.Normal(
+            loc=tf.Variable(tf.zeros([1])),
+            scale=tf.Variable(tf.ones([1])) * tf.ones([n_train, 1])))
+        eta = st.StochasticTensor(ds.Normal(
+            loc=tf.matmul(x_ph, q_theta.mean()),
+            scale=tf.sqrt(tf.matmul(tf.square(x_ph), q_theta.variance()))))
+
+    llik = ds.NormalWithSoftplusScale(loc=eta, scale=q_residual_scale).log_prob(y_ph)
+
+    with st.value_type(st.MeanValue()):
+        approx = {
+            q_residual_scale: p_residual_scale,
+            st.StochasticTensor(q_logodds): p_logodds,
+            st.StochasticTensor(q_scale): p_scale,
+            st.StochasticTensor(q_theta): p_theta,
+        }
+
+    elbo = tf.reduce_mean(tf.reduce_sum(bf.variational_inference.elbo(llik, approx), axis=[1, 2]))
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Optimize the variational objective  
+
+  #+BEGIN_SRC ipython :session kernel-aksarkar.json
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=0.01)
+    train = optimizer.minimize(-elbo, var_list=tf.trainable_variables())
+    saver = tf.train.Saver(var_list=tf.trainable_variables())
+  #+END_SRC
+
+  #+RESULTS:
+
+  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results raw drawer
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        for i in range(2000):
+            _, elbo_val = sess.run([train, tf.convert_to_tensor(elbo)],
+                feed_dict={x_ph: x_train, y_ph: y_train})
+            if not i % 100:
+                print(i, elbo_val)
+        # GLM coefficient of determination
+        R = 1 - tf.reduce_sum(tf.square(y_ph - eta.mean())) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+        training_score = sess.run(R, {x_ph: x_train, y_ph: y_train})
+        validation_score = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
+        opt = sess.run([tf.nn.sigmoid(q_theta._logodds),
+                        q_theta.mean(),
+                        tf.nn.sigmoid(q_logodds.mean()),
+                        q_logodds.variance(),
+                        tf.nn.softplus(q_residual_scale.mean())])
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
