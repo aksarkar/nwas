@@ -1,0 +1,8 @@
+#+TITLE: NWAS
+
+- [[file:example.org][Linear regression with spike and slab prior]]
+- [[file:pleiotropy.org][Modeling pleiotropic effects]]
+- [[file:unmediated.org][Modeling uncorrelated, unmediated effects]]
+- [[file:model.org][Proposed model]]
+- [[file:bayesflow.org][Spike-and-slab regression in Bayesflow]]
+- [[file:twostage.org][Two-stage regression]]
