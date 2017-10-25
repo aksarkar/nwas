@@ -10,44 +10,59 @@
 #+EXCLUDE_TAGS: noexport
 #+CREATOR: Emacs 25.1.1 (Org mode 9.1.1)
 
+#+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t
+
 * Setup
+
+  #+BEGIN_SRC emacs-lisp
+    (setq temporary-directory "/scratch/midway2/aksarkar"
+          python-shell-prompt-regexp "In ")
+  #+END_SRC
+
+  #+RESULTS:
+  : In 
 
   Run a remote ~ipython3~ kernel on ~midway2~, then connect to it locally using
   [[https://github.com/gregsexton/ob-ipython][ob-ipython]]. On the ~org-mode~ side, we need to name the connection file for the
   kernel in such a way that ~ob-ipython~ recognizes it.
 
-  #+BEGIN_SRC shell
+  #+BEGIN_SRC shell :dir (concat (file-name-as-directory (getenv "SCRATCH")) "spikeslab")
+  sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
+  #!/bin/bash
   source activate nwas
   rm -f $HOME/.local/share/jupyter/runtime/kernel-aksarkar.json
-  sbatch --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
-  #!/bin/bash
   ipython3 kernel --ip=$(hostname -i) -f kernel-aksarkar.json
   #+END_SRC
 
   #+RESULTS:
-  : Submitted batch job 37067624
+  : Submitted batch job 39154189
 
-  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results none
-  import nwas
-  import tensorflow as tf
+  #+BEGIN_SRC ipython
+    %matplotlib inline
+    import os
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import nwas
+    import tensorflow as tf
 
-  from nwas.models.spikeslab import distribution_SpikeSlab
+    from nwas.models.spikeslab import distribution_SpikeSlab
 
-  bf = tf.contrib.bayesflow
-  ds = tf.contrib.distributions
-  st = bf.stochastic_tensor
+    ds = tf.contrib.distributions
   #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
 
 * Simulate some data
 
-  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results raw drawer
-  p = 1000
-  n_train = 500
-  n_validate = 500
-  pve_y = 0.5
+  #+BEGIN_SRC ipython
+    p = 1000
+    n_train = 500
+    n_validate = 500
+    pve_y = 0.5
 
-  with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
-      true_w = s.theta.reshape(-1, 1)
+    with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
       x_train, y_train = s.sample_gaussian(n=n_train)
       x_validate, y_validate = s.sample_gaussian(n=n_validate)
       x_train = x_train.astype('float32')
@@ -62,49 +77,70 @@
 
 * Build up the stochastic graph  
 
-  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results raw drawer
-    tf.reset_default_graph()
-
+  #+BEGIN_SRC ipython
     stoch_samples = 50
-    x_ph = tf.placeholder(tf.float32)
-    y_ph = tf.placeholder(tf.float32)
+    graph = tf.Graph()
 
-    q_logodds = ds.Normal(loc=tf.Variable(tf.zeros([1])), scale=tf.Variable(tf.ones([1])))
-    q_scale = ds.Normal(loc=tf.Variable(tf.zeros([1])), scale=tf.Variable(tf.ones([1])))
-    q_theta = distribution_SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
-                                     loc=tf.Variable(tf.zeros([p, 1])),
-                                     scale=tf.Variable(tf.zeros([p, 1])))
+    with graph.as_default():
+      x_ph = tf.placeholder(tf.float32)
+      y_ph = tf.placeholder(tf.float32)
 
-    p_residual_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
-    p_logodds = ds.Normal(loc=tf.constant(-5.), scale=tf.ones([1]))
-    p_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
-    # This has to be defined after the variational part because variational
-    # surrogates for hyperparameters appear in the KL term for this distribution
-    p_theta = distribution_SpikeSlab(logodds=q_logodds.mean(),
-                                     loc=tf.zeros([p, 1]),
-                                     scale=q_scale.mean())
+      with tf.variable_scope('q', initializer=tf.random_normal_initializer):
+        with tf.variable_scope('residual_scale'):
+          q_residual_scale = ds.Normal(loc=tf.get_variable('loc', [1]),
+                                       scale=tf.get_variable('scale', [1]))
+        with tf.variable_scope('logodds'):
+          q_logodds = ds.Normal(loc=tf.get_variable('loc', [1]),
+                                scale=tf.get_variable('scale', [1]))
+        with tf.variable_scope('scale'):
+          q_scale = ds.Normal(loc=tf.get_variable('loc', [1]),
+                              scale=tf.get_variable('scale', [1]))
+        with tf.variable_scope('theta'):
+          q_theta = distribution_SpikeSlab(
+            logodds=tf.get_variable('logodds', [p, 1]),
+            loc=tf.get_variable('loc', [p, 1]),
+            scale=tf.get_variable('scale', [p, 1]))
 
-    with st.value_type(st.SampleValue(stoch_samples)):
-        # The residual scale needs an explicit shape since it needs to be broadcast on
-        # the middle dimension
-        q_residual_scale = st.StochasticTensor(ds.Normal(
-            loc=tf.Variable(tf.zeros([1])),
-            scale=tf.Variable(tf.ones([1])) * tf.ones([n_train, 1])))
-        eta = st.StochasticTensor(ds.Normal(
-            loc=tf.matmul(x_ph, q_theta.mean()),
-            scale=tf.sqrt(tf.matmul(tf.square(x_ph), q_theta.variance()))))
+      p_residual_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.constant(10.), name='p_residual')
+      p_logodds = ds.Normal(loc=tf.constant(-5.), scale=tf.ones([1]), name='p_logodds')
+      p_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]), name='p_scale')
+      # This has to be defined after the variational part because variational
+      # surrogates for hyperparameters appear in the KL term for this distribution
+      p_theta = distribution_SpikeSlab(logodds=q_logodds._loc,
+                                       loc=tf.zeros([p, 1]),
+                                       scale=q_scale._loc,
+                                       name='p_theta')
 
-    llik = ds.NormalWithSoftplusScale(loc=eta, scale=q_residual_scale).log_prob(y_ph)
+      approx = {
+        q_residual_scale: p_residual_scale,
+        q_logodds: p_logodds,
+        q_scale: p_scale,
+        q_theta: p_theta,
+      }
 
-    with st.value_type(st.MeanValue()):
-        approx = {
-            q_residual_scale: p_residual_scale,
-            st.StochasticTensor(q_logodds): p_logodds,
-            st.StochasticTensor(q_scale): p_scale,
-            st.StochasticTensor(q_theta): p_theta,
-        }
+      noise = tf.random_normal([stoch_samples, 2])
+      eta = ds.Normal(loc=tf.matmul(x_ph, q_theta.mean()),
+                      scale=tf.sqrt(tf.matmul(tf.square(x_ph), q_theta.variance())))
+      llik = ds.NormalWithSoftplusScale(loc=eta._loc + noise[:, 0] * eta._scale,
+                                        scale=q_residual_scale._loc + noise[:, 1] * q_residual_scale._scale)
+      llik = tf.reduce_mean(tf.reduce_sum(llik.log_prob(y_ph), axis=0))
+      elbo = llik
+      for q_, p_ in approx.items():
+        elbo -= ds.kl_divergence(q_, p_)
+      optimizer = tf.train.RMSPropOptimizer(learning_rate=2.5e-3)
+      train = optimizer.minimize(-elbo)
 
-    elbo = tf.reduce_mean(tf.reduce_sum(bf.variational_inference.elbo(llik, approx), axis=[1, 2]))
+      # GLM coefficient of determination
+      R = 1 - tf.reduce_sum(tf.square(y_ph - eta.mean())) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+
+      grads = tf.gradients(elbo, tf.trainable_variables())
+      opt = [
+        tf.nn.sigmoid(q_theta._logodds),
+        q_theta.mean(),
+        q_logodds.mean(),
+        q_scale.mean(),
+        q_residual_scale.mean(),
+      ]
   #+END_SRC
 
   #+RESULTS:
@@ -113,34 +149,50 @@
 
 * Optimize the variational objective  
 
-  #+BEGIN_SRC ipython :session kernel-aksarkar.json
-    optimizer = tf.train.RMSPropOptimizer(learning_rate=0.01)
-    train = optimizer.minimize(-elbo, var_list=tf.trainable_variables())
-    saver = tf.train.Saver(var_list=tf.trainable_variables())
-  #+END_SRC
-
-  #+RESULTS:
-
-  #+BEGIN_SRC ipython :session kernel-aksarkar.json :results raw drawer
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-        for i in range(2000):
-            _, elbo_val = sess.run([train, tf.convert_to_tensor(elbo)],
-                feed_dict={x_ph: x_train, y_ph: y_train})
-            if not i % 100:
-                print(i, elbo_val)
-        # GLM coefficient of determination
-        R = 1 - tf.reduce_sum(tf.square(y_ph - eta.mean())) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
-        training_score = sess.run(R, {x_ph: x_train, y_ph: y_train})
-        validation_score = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
-        opt = sess.run([tf.nn.sigmoid(q_theta._logodds),
-                        q_theta.mean(),
-                        tf.nn.sigmoid(q_logodds.mean()),
-                        q_logodds.variance(),
-                        tf.nn.softplus(q_residual_scale.mean())])
+  #+BEGIN_SRC ipython
+    sv = tf.train.Supervisor(
+      graph=graph,
+      logdir=os.path.join(os.getenv('SCRATCH'), 'spike-slab-model'))
+    with sv.managed_session() as sess:
+      for i in range(4000):
+        if sv.should_stop():
+          break
+        _, elbo_val = sess.run([train, elbo],
+                               feed_dict={x_ph: x_train, y_ph: y_train})
+        if np.isnan(elbo_val):
+          raise tf.train.NanLossDuringTrainingError
+        if not i % 100:
+          print(i, elbo_val)
+      training_score = sess.run(R, {x_ph: x_train, y_ph: y_train})
+      validation_score = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
+      final_grads = sess.run(grads, {x_ph: x_train, y_ph: y_train})
+      final_opt = sess.run(opt)
+    training_score, validation_score
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
+  : (0.76364934, -0.047796249)
+  :END:
+
+* Plot the fit
+
+  #+BEGIN_SRC ipython
+    plt.clf()
+    q = np.logical_or(s.theta != 0, opt[0].ravel() > 0.1)
+    fig, ax = plt.subplots(3, 1)
+    fig.set_size_inches(6, 8)
+    ax[0].bar(np.arange(np.sum(q)), s.theta[q])
+    ax[0].set_ylabel('True effect size')
+    ax[1].bar(np.arange(np.sum(q)), opt[1].ravel()[q])
+    ax[1].set_ylabel('Estimated effect size')
+    ax[2].bar(np.arange(np.sum(q)), opt[0].ravel()[q])
+    ax[2].set_ylabel('Posterior inclusion probability')
+    ax[2].set_xlabel('True and false positive variants')
+    plt.savefig('fit.png')
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  [[file:./obipy-resources/19307LHc.png]]
   :END:
