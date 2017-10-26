@@ -81,7 +81,7 @@ class distribution_SpikeSlab(Distribution):
 
     def _variance(self):
         p = tf.sigmoid(self._logodds)
-        return (p / tf.nn.softplus(self._scale) +
+        return (p * tf.nn.softplus(self._scale) +
                 p * (1 - p) * tf.square(self._loc))
 
 @RegisterKL(distribution_SpikeSlab, distribution_SpikeSlab)
@@ -94,7 +94,7 @@ def kl_spikeslab(q, p, name=None):
     """
     kl_qtheta_ptheta = tf.sigmoid(q._logodds) * kl_divergence(
         NormalWithSoftplusScale(loc=q._loc, scale=q._scale),
-        NormalWithSoftplusScale(loc=p._loc, scale=q._scale)
+        NormalWithSoftplusScale(loc=p._loc, scale=p._scale)
     )
     kl_qz_pz = tf.sigmoid(q._logodds) * kl_divergence(
         BernoulliWithSigmoidProbs(q._logodds),

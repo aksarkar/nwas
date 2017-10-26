@@ -222,11 +222,11 @@ class Simulation:
             genetic_value /= numpy.sqrt(self.pheno_var)
         return genetic_value
 
-    def sample_gaussian(self, n):
+    def sample_gaussian(self, n, normalize=False):
         """Return matrix of genotypes and vector of phenotypes"""
         x = self.sample_genotypes_iid(n)
         x -= x.mean(axis=0)
-        y = self.compute_liabilities(x)
+        y = self.compute_liabilities(x, normalize=normalize)
         y -= y.mean(axis=0)
         return x, y
 

@@ -35,7 +35,7 @@
   #+END_SRC
 
   #+RESULTS:
-  : Submitted batch job 39154189
+  : Submitted batch job 39295543
 
   #+BEGIN_SRC ipython
     %matplotlib inline
@@ -62,7 +62,7 @@
     n_validate = 500
     pve_y = 0.5
 
-    with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
+    with nwas.simulation.simulation(p, pve_y, [(10, 1)], 0) as s:
       x_train, y_train = s.sample_gaussian(n=n_train)
       x_validate, y_validate = s.sample_gaussian(n=n_validate)
       x_train = x_train.astype('float32')
@@ -86,7 +86,7 @@
       y_ph = tf.placeholder(tf.float32)
 
       with tf.variable_scope('q', initializer=tf.random_normal_initializer):
-        with tf.variable_scope('residual_scale'):
+        with tf.variable_scope('residual'):
           q_residual_scale = ds.Normal(loc=tf.get_variable('loc', [1]),
                                        scale=tf.get_variable('scale', [1]))
         with tf.variable_scope('logodds'):
@@ -139,7 +139,7 @@
         q_theta.mean(),
         q_logodds.mean(),
         q_scale.mean(),
-        q_residual_scale.mean(),
+        tf.nn.softplus(q_residual_scale.mean()),
       ]
   #+END_SRC
 
@@ -163,6 +163,7 @@
           raise tf.train.NanLossDuringTrainingError
         if not i % 100:
           print(i, elbo_val)
+      sv.saver.save(sess, sv.save_path)
       training_score = sess.run(R, {x_ph: x_train, y_ph: y_train})
       validation_score = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
       final_grads = sess.run(grads, {x_ph: x_train, y_ph: y_train})
@@ -172,27 +173,27 @@
 
   #+RESULTS:
   :RESULTS:
-  : (0.76364934, -0.047796249)
+  : (0.60029113, 0.41310757)
   :END:
 
 * Plot the fit
 
-  #+BEGIN_SRC ipython
+  #+BEGIN_SRC ipython :ipyfile fit.svg
     plt.clf()
-    q = np.logical_or(s.theta != 0, opt[0].ravel() > 0.1)
+    q = np.logical_or(s.theta != 0, final_opt[0].ravel() > 0.1)
     fig, ax = plt.subplots(3, 1)
     fig.set_size_inches(6, 8)
     ax[0].bar(np.arange(np.sum(q)), s.theta[q])
     ax[0].set_ylabel('True effect size')
-    ax[1].bar(np.arange(np.sum(q)), opt[1].ravel()[q])
+    ax[1].bar(np.arange(np.sum(q)), final_opt[1].ravel()[q])
     ax[1].set_ylabel('Estimated effect size')
-    ax[2].bar(np.arange(np.sum(q)), opt[0].ravel()[q])
+    ax[2].bar(np.arange(np.sum(q)), final_opt[0].ravel()[q])
     ax[2].set_ylabel('Posterior inclusion probability')
     ax[2].set_xlabel('True and false positive variants')
-    plt.savefig('fit.png')
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
-  [[file:./obipy-resources/19307LHc.png]]
+  : <matplotlib.text.Text at 0x2b920be52978>
+  [[file:fit.svg]]
   :END:
