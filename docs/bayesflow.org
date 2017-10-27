@@ -147,6 +147,76 @@
   :RESULTS:
   :END:
 
+* Port the Theano version
+
+  #+BEGIN_SRC ipython
+    graph = tf.Graph()
+
+    with graph.as_default():
+      x_ph = tf.placeholder(tf.float32)
+      y_ph = tf.placeholder(tf.float32)
+
+      with tf.variable_scope('model', initializer=tf.zeros_initializer):
+        # residual
+        q_log_prec_mean = tf.get_variable('q_log_prec_mean', shape=[1])
+        q_log_prec_log_prec = tf.get_variable('q_log_prec_log_prec', shape=[1])
+        q_log_prec_prec = 1e-6 + tf.nn.softplus(q_log_prec_log_prec)
+        q_log_prec_std = tf.sqrt(tf.reciprocal(q_log_prec_prec))
+
+        q_logodds_mean = tf.get_variable('q_logodds_mean', initializer=tf.constant([-10.]))
+        q_logodds_log_prec = tf.get_variable('q_logodds_log_prec', shape=[1])
+        q_logodds_prec = 1e-6 + tf.nn.softplus(q_logodds_log_prec)
+        # In [685]: np.log(np.finfo('float32').resolution)
+        # Out[693]: -13.815511
+        pi = tf.nn.sigmoid(tf.clip_by_value(q_logodds_mean, -13, 13))
+
+        q_scale_mean = tf.get_variable('q_scale_mean', shape=[1])
+        q_scale_log_prec = tf.get_variable('q_scale_log_prec', shape=[1])
+        q_scale_prec = 1e-6 + tf.nn.softplus(q_scale_log_prec)
+        tau = tf.nn.softplus(q_scale_mean)
+
+        q_logit_z = tf.get_variable('q_logit_z', shape=[p, 1])
+        q_z = tf.nn.sigmoid(tf.clip_by_value(q_logit_z, -13, 13))
+
+        q_theta_mean = tf.get_variable('q_theta_mean', shape=[p, 1])
+        q_theta_log_prec = tf.get_variable('q_theta_log_prec', shape=[p, 1])
+        q_theta_prec = 1e-6 + tf.nn.softplus(q_theta_log_prec)
+
+      theta_posterior_mean = q_z * q_theta_mean
+      theta_posterior_var = q_z / q_theta_prec + q_z * (1 - q_z) * tf.square(q_theta_mean)
+      eta_mean = tf.matmul(x_ph, theta_posterior_mean)
+      eta_std = tf.sqrt(tf.matmul(tf.square(x_ph), theta_posterior_var))
+
+      noise = tf.random_normal([50, 2])
+      eta = eta_mean + noise[:,0] * eta_std
+      phi = tf.nn.softplus(q_log_prec_mean + noise[:,1] * q_log_prec_std)
+
+      llik = -.5 * tf.reduce_mean(tf.reduce_sum(-tf.log(phi) + tf.square(y_ph - eta) * phi, axis=0))
+      kl_z = tf.reduce_sum(q_z * tf.log(q_z / pi) + (1 - q_z) * tf.log((1 - q_z) / (1 - pi)))
+      kl_theta = tf.reduce_sum(q_z * .5 * (1 - tf.log(tau) + tf.log(q_theta_prec) + tau * (tf.square(q_theta_mean) + 1 / q_theta_prec)))
+      kl_logodds = .5 * tf.reduce_sum(1 + tf.log(q_logodds_prec) + (tf.square(q_logodds_mean) + 1 / q_logodds_prec))
+      kl_scale = .5 * tf.reduce_sum(1 + tf.log(q_scale_prec) + (tf.square(q_scale_mean) + 1 / q_scale_prec))
+      kl_log_prec = .5 * tf.reduce_sum(1 + tf.log(q_log_prec_prec) + (tf.square(q_log_prec_mean) + 1 / q_log_prec_prec))
+      elbo = llik - kl_z - kl_theta - kl_logodds - kl_scale - kl_log_prec
+
+      optimizer = tf.train.RMSPropOptimizer(learning_rate=1e-2)
+      train = optimizer.minimize(-elbo)
+
+      # GLM coefficient of determination
+      R = 1 - tf.reduce_sum(tf.square(y_ph - eta_mean)) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+
+      opt = [
+        q_z,
+        theta_posterior_mean,
+        pi,
+        tau,
+      ]
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
 * Optimize the variational objective  
 
   #+BEGIN_SRC ipython
@@ -157,23 +227,22 @@
       for i in range(4000):
         if sv.should_stop():
           break
-        _, elbo_val = sess.run([train, elbo],
-                               feed_dict={x_ph: x_train, y_ph: y_train})
+        _, *trace = sess.run([train, elbo, llik, kl_z, kl_theta, kl_logodds, kl_scale, kl_log_prec],
+                             feed_dict={x_ph: x_train, y_ph: y_train})
         if np.isnan(elbo_val):
           raise tf.train.NanLossDuringTrainingError
         if not i % 100:
-          print(i, elbo_val)
+          print(i, *trace)
       sv.saver.save(sess, sv.save_path)
       training_score = sess.run(R, {x_ph: x_train, y_ph: y_train})
       validation_score = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
-      final_grads = sess.run(grads, {x_ph: x_train, y_ph: y_train})
       final_opt = sess.run(opt)
     training_score, validation_score
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
-  : (0.60029113, 0.41310757)
+  : (0.5309304, 0.51414639)
   :END:
 
 * Plot the fit
