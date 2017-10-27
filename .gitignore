@@ -107,3 +107,4 @@ locate.db
 *.vrb
 
 docs/*.py
+/TAGS
