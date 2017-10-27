@@ -3,10 +3,10 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-10-04 Wed 22:03 -->
+<!-- 2017-10-27 Fri 11:13 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Spike-and-slab regression in Bayesflow</title>
+<title>Spike-and-slab regression in tensorflow</title>
 <meta name="generator" content="Org mode" />
 <meta name="author" content="Abhishek Sarkar" />
 <style type="text/css">
@@ -229,15 +229,16 @@ for the JavaScript code in this tag.
 </head>
 <body>
 <div id="content">
-<h1 class="title">Spike-and-slab regression in Bayesflow</h1>
+<h1 class="title">Spike-and-slab regression in tensorflow</h1>
 <div id="table-of-contents">
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
 <li><a href="#org6cc16a1">1. Setup</a></li>
 <li><a href="#orgea9ebb7">2. Simulate some data</a></li>
-<li><a href="#orgfb72c2c">3. Build up the stochastic graph</a></li>
+<li><a href="#orgf32bd85">3. Port the Theano version</a></li>
 <li><a href="#org0cbfb66">4. Optimize the variational objective</a></li>
+<li><a href="#orgcf0a04d">5. Plot the fit</a></li>
 </ul>
 </div>
 </div>
@@ -252,24 +253,22 @@ kernel in such a way that <code>ob-ipython</code> recognizes it.
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-shell"><span style="color: #00cd00;">source</span> activate nwas
-rm -f $<span style="color: #0000ee;">HOME</span>/.local/share/jupyter/runtime/kernel-aksarkar.json
-sbatch --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
-<span style="color: #00ffff; font-style: italic;">#</span><span style="color: #00ffff; font-style: italic;">!/bin/bash</span>
-ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kernel-aksarkar.json
-</code></pre>
+<pre class="src src-shell">sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
+<span style="color: brightcyan; font-style: italic;">#</span><span style="color: brightcyan; font-style: italic;">!/bin/bash</span>
+<span style="color: #00ff00;">source</span> activate nwas
+rm -f $<span style="color: #0000ff;">HOME</span>/.local/share/jupyter/runtime/kernel-aksarkar.json
+ipython3 kernel --ip=$(<span style="color: #ff00ff;">hostname</span> -i) -f kernel-aksarkar.json
+</pre>
 </div>
 
 <div class="org-src-container">
-<pre><code class="src src-ipython"><span style="color: #00cd00;">import</span> nwas
-<span style="color: #00cd00;">import</span> tensorflow <span style="color: #00cd00;">as</span> tf
-
-<span style="color: #00cd00;">from</span> nwas.models.spikeslab <span style="color: #00cd00;">import</span> distribution_SpikeSlab
-
-<span style="color: #0000ee;">bf</span> = tf.contrib.bayesflow
-<span style="color: #0000ee;">ds</span> = tf.contrib.distributions
-<span style="color: #0000ee;">st</span> = bf.stochastic_tensor
-</code></pre>
+<pre class="src src-ipython">%matplotlib inline
+<span style="color: #00ff00;">import</span> os
+<span style="color: #00ff00;">import</span> matplotlib.pyplot <span style="color: #00ff00;">as</span> plt
+<span style="color: #00ff00;">import</span> numpy <span style="color: #00ff00;">as</span> np
+<span style="color: #00ff00;">import</span> nwas
+<span style="color: #00ff00;">import</span> tensorflow <span style="color: #00ff00;">as</span> tf
+</pre>
 </div>
 </div>
 </div>
@@ -278,71 +277,89 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
 <h2 id="orgea9ebb7"><span class="section-number-2">2</span> Simulate some data</h2>
 <div class="outline-text-2" id="text-2">
 <div class="org-src-container">
-<pre><code class="src src-ipython"><span style="color: #0000ee;">p</span> = 1000
-<span style="color: #0000ee;">n_train</span> = 500
-<span style="color: #0000ee;">n_validate</span> = 500
-<span style="color: #0000ee;">pve_y</span> = 0.5
+<pre class="src src-ipython"><span style="color: #0000ff;">p</span> = 1000
+<span style="color: #0000ff;">n_train</span> = 500
+<span style="color: #0000ff;">n_validate</span> = 500
+<span style="color: #0000ff;">pve_y</span> = 0.5
 
-<span style="color: #00cd00;">with</span> nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) <span style="color: #00cd00;">as</span> s:
-    <span style="color: #0000ee;">true_w</span> = s.theta.reshape(-1, 1)
-    <span style="color: #0000ee;">x_train</span>, <span style="color: #0000ee;">y_train</span> = s.sample_gaussian(n=n_train)
-    <span style="color: #0000ee;">x_validate</span>, <span style="color: #0000ee;">y_validate</span> = s.sample_gaussian(n=n_validate)
-    <span style="color: #0000ee;">x_train</span> = x_train.astype(<span style="color: #00cdcd;">'float32'</span>)
-    <span style="color: #0000ee;">x_validate</span> = x_validate.astype(<span style="color: #00cdcd;">'float32'</span>)
-    <span style="color: #0000ee;">y_train</span> = y_train.reshape(-1, 1).astype(<span style="color: #00cdcd;">'float32'</span>)
-    <span style="color: #0000ee;">y_validate</span> = y_validate.reshape(-1, 1).astype(<span style="color: #00cdcd;">'float32'</span>)
-</code></pre>
+<span style="color: #00ff00;">with</span> nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) <span style="color: #00ff00;">as</span> s:
+  <span style="color: #0000ff;">x_train</span>, <span style="color: #0000ff;">y_train</span> = s.sample_gaussian(n=n_train)
+  <span style="color: #0000ff;">x_validate</span>, <span style="color: #0000ff;">y_validate</span> = s.sample_gaussian(n=n_validate)
+  <span style="color: #0000ff;">x_train</span> = x_train.astype(<span style="color: #00ffff;">'float32'</span>)
+  <span style="color: #0000ff;">x_validate</span> = x_validate.astype(<span style="color: #00ffff;">'float32'</span>)
+  <span style="color: #0000ff;">y_train</span> = y_train.reshape(-1, 1).astype(<span style="color: #00ffff;">'float32'</span>)
+  <span style="color: #0000ff;">y_validate</span> = y_validate.reshape(-1, 1).astype(<span style="color: #00ffff;">'float32'</span>)
+</pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-orgfb72c2c" class="outline-2">
-<h2 id="orgfb72c2c"><span class="section-number-2">3</span> Build up the stochastic graph</h2>
+<div id="outline-container-orgf32bd85" class="outline-2">
+<h2 id="orgf32bd85"><span class="section-number-2">3</span> Port the Theano version</h2>
 <div class="outline-text-2" id="text-3">
 <div class="org-src-container">
-<pre><code class="src src-ipython">tf.reset_default_graph()
+<pre class="src src-ipython"><span style="color: #0000ff;">graph</span> = tf.Graph()
 
-<span style="color: #0000ee;">stoch_samples</span> = 50
-<span style="color: #0000ee;">x_ph</span> = tf.placeholder(tf.float32)
-<span style="color: #0000ee;">y_ph</span> = tf.placeholder(tf.float32)
+<span style="color: #00ff00;">with</span> graph.as_default():
+  <span style="color: #0000ff;">x_ph</span> = tf.placeholder(tf.float32)
+  <span style="color: #0000ff;">y_ph</span> = tf.placeholder(tf.float32)
 
-<span style="color: #0000ee;">q_logodds</span> = ds.Normal(loc=tf.Variable(tf.zeros([1])), scale=tf.Variable(tf.ones([1])))
-<span style="color: #0000ee;">q_scale</span> = ds.Normal(loc=tf.Variable(tf.zeros([1])), scale=tf.Variable(tf.ones([1])))
-<span style="color: #0000ee;">q_theta</span> = distribution_SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
-                                 loc=tf.Variable(tf.zeros([p, 1])),
-                                 scale=tf.Variable(tf.zeros([p, 1])))
+  <span style="color: #00ff00;">with</span> tf.variable_scope(<span style="color: #00ffff;">'model'</span>, initializer=tf.zeros_initializer):
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">residual</span>
+    <span style="color: #0000ff;">q_log_prec_mean</span> = tf.get_variable(<span style="color: #00ffff;">'q_log_prec_mean'</span>, shape=[1])
+    <span style="color: #0000ff;">q_log_prec_log_prec</span> = tf.get_variable(<span style="color: #00ffff;">'q_log_prec_log_prec'</span>, shape=[1])
+    <span style="color: #0000ff;">q_log_prec_prec</span> = 1e-6 + tf.nn.softplus(q_log_prec_log_prec)
+    <span style="color: #0000ff;">q_log_prec_std</span> = tf.sqrt(tf.reciprocal(q_log_prec_prec))
 
-<span style="color: #0000ee;">p_residual_scale</span> = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
-<span style="color: #0000ee;">p_logodds</span> = ds.Normal(loc=tf.constant(-5.), scale=tf.ones([1]))
-<span style="color: #0000ee;">p_scale</span> = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">This has to be defined after the variational part because variational</span>
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">surrogates for hyperparameters appear in the KL term for this distribution</span>
-<span style="color: #0000ee;">p_theta</span> = distribution_SpikeSlab(logodds=q_logodds.mean(),
-                                 loc=tf.zeros([p, 1]),
-                                 scale=q_scale.mean())
+    <span style="color: #0000ff;">q_logodds_mean</span> = tf.get_variable(<span style="color: #00ffff;">'q_logodds_mean'</span>, initializer=tf.constant([-10.]))
+    <span style="color: #0000ff;">q_logodds_log_prec</span> = tf.get_variable(<span style="color: #00ffff;">'q_logodds_log_prec'</span>, shape=[1])
+    <span style="color: #0000ff;">q_logodds_prec</span> = 1e-6 + tf.nn.softplus(q_logodds_log_prec)
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">In [685]: np.log(np.finfo('float32').resolution)</span>
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Out[693]: -13.815511</span>
+    <span style="color: #0000ff;">pi</span> = tf.nn.sigmoid(tf.clip_by_value(q_logodds_mean, -13, 13))
 
-<span style="color: #00cd00;">with</span> st.value_type(st.SampleValue(stoch_samples)):
-    <span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">The residual scale needs an explicit shape since it needs to be broadcast on</span>
-    <span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">the middle dimension</span>
-    <span style="color: #0000ee;">q_residual_scale</span> = st.StochasticTensor(ds.Normal(
-        loc=tf.Variable(tf.zeros([1])),
-        scale=tf.Variable(tf.ones([1])) * tf.ones([n_train, 1])))
-    <span style="color: #0000ee;">eta</span> = st.StochasticTensor(ds.Normal(
-        loc=tf.matmul(x_ph, q_theta.mean()),
-        scale=tf.sqrt(tf.matmul(tf.square(x_ph), q_theta.variance()))))
+    <span style="color: #0000ff;">q_scale_mean</span> = tf.get_variable(<span style="color: #00ffff;">'q_scale_mean'</span>, shape=[1])
+    <span style="color: #0000ff;">q_scale_log_prec</span> = tf.get_variable(<span style="color: #00ffff;">'q_scale_log_prec'</span>, shape=[1])
+    <span style="color: #0000ff;">q_scale_prec</span> = 1e-6 + tf.nn.softplus(q_scale_log_prec)
+    <span style="color: #0000ff;">tau</span> = tf.nn.softplus(q_scale_mean)
 
-<span style="color: #0000ee;">llik</span> = ds.NormalWithSoftplusScale(loc=eta, scale=q_residual_scale).log_prob(y_ph)
+    <span style="color: #0000ff;">q_logit_z</span> = tf.get_variable(<span style="color: #00ffff;">'q_logit_z'</span>, shape=[p, 1])
+    <span style="color: #0000ff;">q_z</span> = tf.nn.sigmoid(tf.clip_by_value(q_logit_z, -13, 13))
 
-<span style="color: #00cd00;">with</span> st.value_type(st.MeanValue()):
-    <span style="color: #0000ee;">approx</span> = {
-        q_residual_scale: p_residual_scale,
-        st.StochasticTensor(q_logodds): p_logodds,
-        st.StochasticTensor(q_scale): p_scale,
-        st.StochasticTensor(q_theta): p_theta,
-    }
+    <span style="color: #0000ff;">q_theta_mean</span> = tf.get_variable(<span style="color: #00ffff;">'q_theta_mean'</span>, shape=[p, 1])
+    <span style="color: #0000ff;">q_theta_log_prec</span> = tf.get_variable(<span style="color: #00ffff;">'q_theta_log_prec'</span>, shape=[p, 1])
+    <span style="color: #0000ff;">q_theta_prec</span> = 1e-6 + tf.nn.softplus(q_theta_log_prec)
 
-<span style="color: #0000ee;">elbo</span> = tf.reduce_mean(tf.reduce_sum(bf.variational_inference.elbo(llik, approx), axis=[1, 2]))
-</code></pre>
+  <span style="color: #0000ff;">theta_posterior_mean</span> = q_z * q_theta_mean
+  <span style="color: #0000ff;">theta_posterior_var</span> = q_z / q_theta_prec + q_z * (1 - q_z) * tf.square(q_theta_mean)
+  <span style="color: #0000ff;">eta_mean</span> = tf.matmul(x_ph, theta_posterior_mean)
+  <span style="color: #0000ff;">eta_std</span> = tf.sqrt(tf.matmul(tf.square(x_ph), theta_posterior_var))
+
+  <span style="color: #0000ff;">noise</span> = tf.random_normal([50, 2])
+  <span style="color: #0000ff;">eta</span> = eta_mean + noise[:,0] * eta_std
+  <span style="color: #0000ff;">phi</span> = tf.nn.softplus(q_log_prec_mean + noise[:,1] * q_log_prec_std)
+
+  <span style="color: #0000ff;">llik</span> = -.5 * tf.reduce_mean(tf.reduce_sum(-tf.log(phi) + tf.square(y_ph - eta) * phi, axis=0))
+  <span style="color: #0000ff;">kl_z</span> = tf.reduce_sum(q_z * tf.log(q_z / pi) + (1 - q_z) * tf.log((1 - q_z) / (1 - pi)))
+  <span style="color: #0000ff;">kl_theta</span> = tf.reduce_sum(q_z * .5 * (1 - tf.log(tau) + tf.log(q_theta_prec) + tau * (tf.square(q_theta_mean) + 1 / q_theta_prec)))
+  <span style="color: #0000ff;">kl_logodds</span> = .5 * tf.reduce_sum(1 + tf.log(q_logodds_prec) + (tf.square(q_logodds_mean) + 1 / q_logodds_prec))
+  <span style="color: #0000ff;">kl_scale</span> = .5 * tf.reduce_sum(1 + tf.log(q_scale_prec) + (tf.square(q_scale_mean) + 1 / q_scale_prec))
+  <span style="color: #0000ff;">kl_log_prec</span> = .5 * tf.reduce_sum(1 + tf.log(q_log_prec_prec) + (tf.square(q_log_prec_mean) + 1 / q_log_prec_prec))
+  <span style="color: #0000ff;">elbo</span> = llik - kl_z - kl_theta - kl_logodds - kl_scale - kl_log_prec
+
+  <span style="color: #0000ff;">optimizer</span> = tf.train.RMSPropOptimizer(learning_rate=1e-2)
+  <span style="color: #0000ff;">train</span> = optimizer.minimize(-elbo)
+
+  <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">GLM coefficient of determination</span>
+  <span style="color: #0000ff;">R</span> = 1 - tf.reduce_sum(tf.square(y_ph - eta_mean)) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+
+  <span style="color: #0000ff;">opt</span> = [
+    q_z,
+    theta_posterior_mean,
+    pi,
+    tau,
+  ]
+</pre>
 </div>
 </div>
 </div>
@@ -351,38 +368,52 @@ ipython3 kernel --ip=$(<span style="color: #cd00cd;">hostname</span> -i) -f kern
 <h2 id="org0cbfb66"><span class="section-number-2">4</span> Optimize the variational objective</h2>
 <div class="outline-text-2" id="text-4">
 <div class="org-src-container">
-<pre><code class="src src-ipython"><span style="color: #0000ee;">optimizer</span> = tf.train.RMSPropOptimizer(learning_rate=0.01)
-<span style="color: #0000ee;">train</span> = optimizer.minimize(-elbo, var_list=tf.trainable_variables())
-<span style="color: #0000ee;">saver</span> = tf.train.Saver(var_list=tf.trainable_variables())
-</code></pre>
+<pre class="src src-ipython"><span style="color: #0000ff;">sv</span> = tf.train.Supervisor(
+  graph=graph,
+  logdir=os.path.join(os.getenv(<span style="color: #00ffff;">'SCRATCH'</span>), <span style="color: #00ffff;">'spike-slab-model'</span>))
+<span style="color: #00ff00;">with</span> sv.managed_session() <span style="color: #00ff00;">as</span> sess:
+  <span style="color: #00ff00;">for</span> i <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(4000):
+    <span style="color: #00ff00;">if</span> sv.should_stop():
+      <span style="color: #00ff00;">break</span>
+    _, *<span style="color: #0000ff;">trace</span> = sess.run([train, elbo, llik, kl_z, kl_theta, kl_logodds, kl_scale, kl_log_prec],
+                         feed_dict={x_ph: x_train, y_ph: y_train})
+    <span style="color: #00ff00;">if</span> np.isnan(elbo_val):
+      <span style="color: #00ff00;">raise</span> tf.train.NanLossDuringTrainingError
+    <span style="color: #00ff00;">if</span> <span style="color: #00ff00;">not</span> i % 100:
+      <span style="color: #00ff00;">print</span>(i, *trace)
+  sv.saver.save(sess, sv.save_path)
+  <span style="color: #0000ff;">training_score</span> = sess.run(R, {x_ph: x_train, y_ph: y_train})
+  <span style="color: #0000ff;">validation_score</span> = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
+  <span style="color: #0000ff;">final_opt</span> = sess.run(opt)
+training_score, validation_score
+</pre>
+</div>
+</div>
 </div>
 
+<div id="outline-container-orgcf0a04d" class="outline-2">
+<h2 id="orgcf0a04d"><span class="section-number-2">5</span> Plot the fit</h2>
+<div class="outline-text-2" id="text-5">
 <div class="org-src-container">
-<pre><code class="src src-ipython"><span style="color: #00cd00;">with</span> tf.Session() <span style="color: #00cd00;">as</span> sess:
-    sess.run(tf.global_variables_initializer())
-    sess.run(tf.local_variables_initializer())
-    <span style="color: #00cd00;">for</span> i <span style="color: #00cd00;">in</span> <span style="color: #00cd00;">range</span>(2000):
-        <span style="color: #0000ee;">_</span>, <span style="color: #0000ee;">elbo_val</span> = sess.run([train, tf.convert_to_tensor(elbo)],
-            feed_dict={x_ph: x_train, y_ph: y_train})
-        <span style="color: #00cd00;">if</span> <span style="color: #00cd00;">not</span> i % 100:
-            <span style="color: #00cd00;">print</span>(i, elbo_val)
-    <span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">GLM coefficient of determination</span>
-    <span style="color: #0000ee;">R</span> = 1 - tf.reduce_sum(tf.square(y_ph - eta.mean())) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
-    <span style="color: #0000ee;">training_score</span> = sess.run(R, {x_ph: x_train, y_ph: y_train})
-    <span style="color: #0000ee;">validation_score</span> = sess.run(R, {x_ph: x_validate, y_ph: y_validate})
-    <span style="color: #0000ee;">opt</span> = sess.run([tf.nn.sigmoid(q_theta._logodds),
-                    q_theta.mean(),
-                    tf.nn.sigmoid(q_logodds.mean()),
-                    q_logodds.variance(),
-                    tf.nn.softplus(q_residual_scale.mean())])
-</code></pre>
+<pre class="src src-ipython">plt.clf()
+<span style="color: #0000ff;">q</span> = np.logical_or(s.theta != 0, final_opt[0].ravel() &gt; 0.1)
+<span style="color: #0000ff;">fig</span>, <span style="color: #0000ff;">ax</span> = plt.subplots(3, 1)
+fig.set_size_inches(6, 8)
+ax[0].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), s.theta[q])
+ax[0].set_ylabel(<span style="color: #00ffff;">'True effect size'</span>)
+ax[1].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), final_opt[1].ravel()[q])
+ax[1].set_ylabel(<span style="color: #00ffff;">'Estimated effect size'</span>)
+ax[2].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), final_opt[0].ravel()[q])
+ax[2].set_ylabel(<span style="color: #00ffff;">'Posterior inclusion probability'</span>)
+ax[2].set_xlabel(<span style="color: #00ffff;">'True and false positive variants'</span>)
+</pre>
 </div>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-10-04 Wed 22:03</p>
+<p class="date">Created: 2017-10-27 Fri 11:13</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

@@ -1,4 +1,4 @@
-#+TITLE: Spike-and-slab regression in Bayesflow
+#+TITLE: Spike-and-slab regression in tensorflow
 #+AUTHOR: Abhishek Sarkar
 #+EMAIL: aksarkar@uchicago.edu
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
@@ -13,14 +13,6 @@
 #+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t
 
 * Setup
-
-  #+BEGIN_SRC emacs-lisp
-    (setq temporary-directory "/scratch/midway2/aksarkar"
-          python-shell-prompt-regexp "In ")
-  #+END_SRC
-
-  #+RESULTS:
-  : In 
 
   Run a remote ~ipython3~ kernel on ~midway2~, then connect to it locally using
   [[https://github.com/gregsexton/ob-ipython][ob-ipython]]. On the ~org-mode~ side, we need to name the connection file for the
@@ -44,10 +36,6 @@
     import numpy as np
     import nwas
     import tensorflow as tf
-
-    from nwas.models.spikeslab import distribution_SpikeSlab
-
-    ds = tf.contrib.distributions
   #+END_SRC
 
   #+RESULTS:
@@ -69,78 +57,6 @@
       x_validate = x_validate.astype('float32')
       y_train = y_train.reshape(-1, 1).astype('float32')
       y_validate = y_validate.reshape(-1, 1).astype('float32')
-  #+END_SRC
-
-  #+RESULTS:
-  :RESULTS:
-  :END:
-
-* Build up the stochastic graph  
-
-  #+BEGIN_SRC ipython
-    stoch_samples = 50
-    graph = tf.Graph()
-
-    with graph.as_default():
-      x_ph = tf.placeholder(tf.float32)
-      y_ph = tf.placeholder(tf.float32)
-
-      with tf.variable_scope('q', initializer=tf.random_normal_initializer):
-        with tf.variable_scope('residual'):
-          q_residual_scale = ds.Normal(loc=tf.get_variable('loc', [1]),
-                                       scale=tf.get_variable('scale', [1]))
-        with tf.variable_scope('logodds'):
-          q_logodds = ds.Normal(loc=tf.get_variable('loc', [1]),
-                                scale=tf.get_variable('scale', [1]))
-        with tf.variable_scope('scale'):
-          q_scale = ds.Normal(loc=tf.get_variable('loc', [1]),
-                              scale=tf.get_variable('scale', [1]))
-        with tf.variable_scope('theta'):
-          q_theta = distribution_SpikeSlab(
-            logodds=tf.get_variable('logodds', [p, 1]),
-            loc=tf.get_variable('loc', [p, 1]),
-            scale=tf.get_variable('scale', [p, 1]))
-
-      p_residual_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.constant(10.), name='p_residual')
-      p_logodds = ds.Normal(loc=tf.constant(-5.), scale=tf.ones([1]), name='p_logodds')
-      p_scale = ds.Normal(loc=tf.zeros([1]), scale=tf.ones([1]), name='p_scale')
-      # This has to be defined after the variational part because variational
-      # surrogates for hyperparameters appear in the KL term for this distribution
-      p_theta = distribution_SpikeSlab(logodds=q_logodds._loc,
-                                       loc=tf.zeros([p, 1]),
-                                       scale=q_scale._loc,
-                                       name='p_theta')
-
-      approx = {
-        q_residual_scale: p_residual_scale,
-        q_logodds: p_logodds,
-        q_scale: p_scale,
-        q_theta: p_theta,
-      }
-
-      noise = tf.random_normal([stoch_samples, 2])
-      eta = ds.Normal(loc=tf.matmul(x_ph, q_theta.mean()),
-                      scale=tf.sqrt(tf.matmul(tf.square(x_ph), q_theta.variance())))
-      llik = ds.NormalWithSoftplusScale(loc=eta._loc + noise[:, 0] * eta._scale,
-                                        scale=q_residual_scale._loc + noise[:, 1] * q_residual_scale._scale)
-      llik = tf.reduce_mean(tf.reduce_sum(llik.log_prob(y_ph), axis=0))
-      elbo = llik
-      for q_, p_ in approx.items():
-        elbo -= ds.kl_divergence(q_, p_)
-      optimizer = tf.train.RMSPropOptimizer(learning_rate=2.5e-3)
-      train = optimizer.minimize(-elbo)
-
-      # GLM coefficient of determination
-      R = 1 - tf.reduce_sum(tf.square(y_ph - eta.mean())) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
-
-      grads = tf.gradients(elbo, tf.trainable_variables())
-      opt = [
-        tf.nn.sigmoid(q_theta._logodds),
-        q_theta.mean(),
-        q_logodds.mean(),
-        q_scale.mean(),
-        tf.nn.softplus(q_residual_scale.mean()),
-      ]
   #+END_SRC
 
   #+RESULTS:
