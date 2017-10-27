@@ -62,7 +62,7 @@
     n_validate = 500
     pve_y = 0.5
 
-    with nwas.simulation.simulation(p, pve_y, [(10, 1)], 0) as s:
+    with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
       x_train, y_train = s.sample_gaussian(n=n_train)
       x_validate, y_validate = s.sample_gaussian(n=n_validate)
       x_train = x_train.astype('float32')
@@ -242,7 +242,7 @@
 
   #+RESULTS:
   :RESULTS:
-  : (0.5309304, 0.51414639)
+  : (0.44175905, 0.26670796)
   :END:
 
 * Plot the fit
@@ -263,6 +263,6 @@
 
   #+RESULTS:
   :RESULTS:
-  : <matplotlib.text.Text at 0x2b920be52978>
+  : <matplotlib.text.Text at 0x2b9238e70e10>
   [[file:fit.svg]]
   :END:
