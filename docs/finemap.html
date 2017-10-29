@@ -1,0 +1,546 @@
+html-strict
+<html>
+<head>
+<!-- 2017-10-29 Sun 21:15 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finemapping idea</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Abhishek Sarkar">
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Finemapping idea</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org0ec1ce8">1. Setup</a></li>
+<li><a href="#org259dbe9">2. Simulated data and existing method</a></li>
+<li><a href="#org4007c05">3. Proposed model</a></li>
+<li><a href="#org814355b">4. Coordinate ascent</a></li>
+<li><a href="#org03d36fc">5. Direct optimization with SGD</a></li>
+<li><a href="#orgf4a6d54">6. Relaxation of Categorical variables</a></li>
+<li><a href="#org4161096">7. Projected stochastic gradient descent</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org0ec1ce8" class="outline-2">
+<h2 id="org0ec1ce8"><span class="section-number-2">1</span> Setup</h2>
+<div class="outline-text-2" id="text-1">
+<div class="org-src-container">
+<pre class="src src-shell">sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
+<span style="color: brightcyan; font-style: italic;">#</span><span style="color: brightcyan; font-style: italic;">!/bin/bash</span>
+<span style="color: #00ff00;">source</span> activate nwas
+rm -f $<span style="color: #0000ff;">HOME</span>/.local/share/jupyter/runtime/kernel-aksarkar.json
+ipython3 kernel --ip=$(<span style="color: #ff00ff;">hostname</span> -i) -f kernel-aksarkar.json
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython">%matplotlib inline
+<span style="color: #00ff00;">import</span> matplotlib.pyplot <span style="color: #00ff00;">as</span> plt
+<span style="color: #00ff00;">import</span> nwas
+<span style="color: #00ff00;">import</span> numpy <span style="color: #00ff00;">as</span> np
+<span style="color: #00ff00;">import</span> tensorflow <span style="color: #00ff00;">as</span> tf
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org259dbe9" class="outline-2">
+<h2 id="org259dbe9"><span class="section-number-2">2</span> Simulated data and existing method</h2>
+<div class="outline-text-2" id="text-2">
+<div class="org-src-container">
+<pre class="src src-ipython"><span style="color: #00ff00;">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span style="color: #00ff00;">as</span> s:
+  <span style="color: #0000ff;">x</span>, <span style="color: #0000ff;">y</span> = s.sample_gaussian(n=500)
+  <span style="color: #0000ff;">x</span> = x.astype(<span style="color: #00ffff;">'float32'</span>)
+  <span style="color: #0000ff;">y</span> = y.reshape(-1, 1).astype(<span style="color: #00ffff;">'float32'</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span style="color: #0000ff;">opt</span> = nwas.sgvb.gaussian_spike_slab(x, y, stoch_samples=10)
+
+plt.clf()
+<span style="color: #0000ff;">q</span> = np.logical_or(s.theta != 0, opt[0].ravel() &gt; 0.1)
+<span style="color: #0000ff;">fig</span>, <span style="color: #0000ff;">ax</span> = plt.subplots(3, 1, sharex=<span style="color: #00ffff;">True</span>)
+fig.set_size_inches(6, 8)
+ax[0].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), s.theta[q])
+ax[0].set_ylabel(<span style="color: #00ffff;">'True effect size'</span>)
+ax[1].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), opt[1].ravel()[q])
+ax[1].set_ylabel(<span style="color: #00ffff;">'Estimated effect size'</span>)
+ax[2].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), opt[0].ravel()[q])
+ax[2].set_ylabel(<span style="color: #00ffff;">'Posterior inclusion probability'</span>)
+ax[2].set_xlabel(<span style="color: #00ffff;">'True and false positive variants'</span>)
+</pre>
+</div>
+
+<pre class="example">
+&lt;matplotlib.text.Text at 0x2b137360ec18&gt;
+
+</pre>
+
+<div class="figure">
+<p><img src="spike-slab-fit.png" alt="spike-slab-fit.png">
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4007c05" class="outline-2">
+<h2 id="org4007c05"><span class="section-number-2">3</span> Proposed model</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Revise the notation, using Latin for the model and Greek for the variational
+approximation.
+</p>
+
+<p>
+\[ p(y \mid x, \mathbf{w}) = N(y; x \mathbf{w}', v^{-1} \mathbf{I}) \]
+\[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
+\[ p(z_k) = \mathrm{Multinomial}(1, \mathbf{p}) \]
+\[ p(b_{kj}) = N(0, v_b^{-1}) \]
+\[ q(z_k) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
+\[ q(b_{kj}) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
+</p>
+</div>
+</div>
+
+<div id="outline-container-org814355b" class="outline-2">
+<h2 id="org814355b"><span class="section-number-2">4</span> Coordinate ascent</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+Between the old approximation and this approximation, the only difference is
+\(KL\left(q(z)\Vert p(z)\right)\), but it has the same form:
+</p>
+
+<p>
+\[ KL = \sum_k E_q[\ln q(z_k) - \ln p(z_k)] \]
+\[= \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{kj}\right] \]
+\[= \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{kj} \right) \]
+</p>
+
+<p>
+This suggests that simply using the same update as the spike-and-slab version
+will work.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span style="color: #00ff00;">def</span> <span style="color: #0000ff;">coordinate_ascent</span>(x, y, effect_var, residual_var, l=5, num_epochs=100):
+  <span style="color: #0000ff;">n</span>, <span style="color: #0000ff;">p</span> = x.shape
+  <span style="color: #0000ff;">pi</span> = np.ones((p, 1))
+  <span style="color: #0000ff;">d</span> = np.einsum(<span style="color: #00ffff;">'ij,ij-&gt;j'</span>, x, x).reshape(-1, 1)
+  <span style="color: #0000ff;">xy</span> = x.T.dot(y)
+  <span style="color: #0000ff;">pip</span> = np.zeros((l, p))
+  <span style="color: #0000ff;">mean</span> = np.zeros((l, p))
+  <span style="color: #0000ff;">eta</span> = np.dot(x, (pip * mean).<span style="color: #00ff00;">sum</span>(axis=0, keepdims=<span style="color: #00ffff;">True</span>).T)
+  <span style="color: #00ff00;">for</span> _ <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(num_epochs):
+    <span style="color: #00ff00;">for</span> k <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(l):
+      <span style="color: #0000ff;">eta</span> -= np.dot(x, (pip * mean)[k:k + 1].T)
+      <span style="color: #0000ff;">var</span> = effect_var * residual_var / (effect_var * d + 1)
+      <span style="color: #0000ff;">mean</span>[k:k + 1] = (var / residual_var * (xy - x.T.dot(eta))).T
+      <span style="color: #0000ff;">pip</span>[k:k + 1] = (pi * np.exp(.5 * (np.log(var / (effect_var * residual_var)) + np.square(mean[k:k + 1].T) / var))).T
+      <span style="color: #0000ff;">pip</span>[k] /= pip[k].<span style="color: #00ff00;">sum</span>()
+      <span style="color: #0000ff;">eta</span> += np.dot(x, (pip * mean)[k:k + 1].T)
+  <span style="color: #00ff00;">return</span> pip, mean, var
+
+<span style="color: #0000ff;">opt1</span> = coordinate_ascent(x, y, 1, s.residual_var)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython">plt.clf()
+<span style="color: #0000ff;">fig</span>, <span style="color: #0000ff;">ax</span> = plt.subplots(2, 1, sharex=<span style="color: #00ffff;">True</span>)
+fig.set_size_inches(6, 8)
+ax[0].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), s.theta[q])
+ax[0].set_ylabel(<span style="color: #00ffff;">'True effect size'</span>)
+<span style="color: #0000ff;">im</span> = ax[1].imshow(opt1[0][:,q], cmap=<span style="color: #00ffff;">'Reds'</span>)
+ax[1].set_ylabel(<span style="color: #00ffff;">'One-hot causal SNP indicators'</span>)
+ax[1].set_xlabel(<span style="color: #00ffff;">'True and false positive variants'</span>)
+<span style="color: #0000ff;">cbar</span> = plt.gcf().colorbar(im, ax=ax[1], orientation=<span style="color: #00ffff;">'horizontal'</span>)
+cbar.ax.set_xlabel(<span style="color: #00ffff;">'Posterior inclusion probability'</span>)
+</pre>
+</div>
+
+<pre class="example">
+&lt;matplotlib.text.Text at 0x2b137ca26a58&gt;
+
+</pre>
+
+<div class="figure">
+<p><img src="coordinate-ascent-opt.png" alt="coordinate-ascent-opt.png">
+</p>
+</div>
+
+<p>
+<b>Open question:</b> If this term has the same form as the spike-and-slab version
+(take Bernoulli to be Multinomial with two classes), then is it really going
+to give a different answer?
+</p>
+
+<p>
+<b>Open question:</b> Why is \(\beta\) not shared?
+</p>
+
+<p>
+<b>Open question:</b> Can we just use \(\mathrm{Multinomial}(l, \pi)\) ?
+</p>
+</div>
+</div>
+
+<div id="outline-container-org03d36fc" class="outline-2">
+<h2 id="org03d36fc"><span class="section-number-2">5</span> Direct optimization with SGD</h2>
+</div>
+
+<div id="outline-container-orgf4a6d54" class="outline-2">
+<h2 id="orgf4a6d54"><span class="section-number-2">6</span> Relaxation of Categorical variables</h2>
+<div class="outline-text-2" id="text-6">
+<p>
+In order to make the model amenable to SGVB, we could use the ExpConcrete
+distribution (<a href="https://arxiv.org/abs/1611.00712">Maddison et al 2017</a>, <a href="https://arxiv.org/abs/1611.01144">Jang et al 2017</a>) in place of the
+Categorical distribution.
+</p>
+
+<p>
+This will be important for using it as a building block in larger models.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span style="color: #00ff00;">def</span> <span style="color: #0000ff;">exp_concrete_llik</span>(y, weights, temperature):
+  <span style="color: brightcyan; font-style: italic;">"""Appendix C.3"""</span>
+  <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">This hack is needed because the type of y.shape isn't Tensor</span>
+  <span style="color: #0000ff;">n</span> = <span style="color: #00ff00;">float</span>(<span style="color: #00ff00;">int</span>(y.shape[-1]))
+  <span style="color: #00ff00;">return</span> (tf.lgamma(n) + (n - 1.) * tf.log(temperature) +
+          <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Sum on the event dimension, leaving [stoch_samples, l]</span>
+          tf.reduce_sum(tf.nn.log_softmax(tf.log(weights) - temperature * y), -1))
+
+<span style="color: #00ff00;">def</span> <span style="color: #0000ff;">normal_llik</span>(y, mean, prec):
+  <span style="color: #00ff00;">return</span> -.5 * (-tf.log(prec) + tf.square(y - mean) * prec)
+
+<span style="color: #00ff00;">def</span> <span style="color: #0000ff;">kl_normal_normal</span>(mean_a, prec_a, mean_b, prec_b):
+  <span style="color: #00ff00;">return</span> .5 * tf.reduce_sum(1 + tf.log(prec_a) - tf.log(prec_b) + (tf.square(mean_a - mean_b) + 1 / prec_a))
+
+<span style="color: #00ff00;">def</span> <span style="color: #0000ff;">fit</span>(x, y, l, num_epochs=1000, stoch_samples=50, learning_rate=1e-3):
+  <span style="color: brightcyan; font-style: italic;">"""Fit the model assuming l causal variants"""</span>
+  <span style="color: #0000ff;">graph</span> = tf.Graph()
+  <span style="color: #00ff00;">with</span> graph.as_default():
+    <span style="color: #0000ff;">x_ph</span> = tf.placeholder(tf.float32)
+    <span style="color: #0000ff;">y_ph</span> = tf.placeholder(tf.float32)
+
+    <span style="color: #00ff00;">with</span> tf.variable_scope(<span style="color: #00ffff;">'q'</span>, initializer=tf.random_normal_initializer):
+      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Residual inverse variance</span>
+      <span style="color: #0000ff;">y_prec_mean</span> = tf.get_variable(<span style="color: #00ffff;">'y_prec_mean'</span>, [1])
+      <span style="color: #0000ff;">y_prec_prec</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'y_prec_prec'</span>, [1]))
+      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Effect size inverse variance</span>
+      <span style="color: #0000ff;">effect_prec_mean</span> = tf.get_variable(<span style="color: #00ffff;">'effect_prec_mean'</span>, [1])
+      <span style="color: #0000ff;">effect_prec_prec</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'effect_prec_prec'</span>, [1]))
+      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">ExpConcrete indicator (relaxation of Categorical)</span>
+      <span style="color: #0000ff;">weights</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'logodds'</span>, [l, p]))
+      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Gaussian effect size</span>
+      <span style="color: #0000ff;">mean</span> = tf.get_variable(<span style="color: #00ffff;">'mean'</span>, [l, p])
+      <span style="color: #0000ff;">prec</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'prec'</span>, [l, p]))
+
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">TODO: priors appear only in the KL terms which is tricky for</span>
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">reading/understanding, but bayesflow doesn't DTRT</span>
+    <span style="color: #0000ff;">kl_y_prec</span> = kl_normal_normal(y_prec_mean, y_prec_prec, tf.constant(0.), tf.constant(1.))
+    <span style="color: #0000ff;">kl_effect_prec</span> = kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))
+    <span style="color: #0000ff;">kl_mean</span> = kl_normal_normal(mean, prec, tf.constant(0.), 1e-6 + tf.nn.softplus(effect_prec_mean))
+
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">TODO: non-fixed temperature?</span>
+    <span style="color: #0000ff;">temperature</span> = tf.constant(0.5)
+    <span style="color: #0000ff;">gumbel_samples</span> = -tf.log(-tf.log(tf.random_uniform([stoch_samples, l, p])))
+    <span style="color: #0000ff;">exp_concrete_samples</span> = (tf.log(weights) + gumbel_samples) / temperature
+    <span style="color: #0000ff;">exp_concrete_samples</span> -= tf.reduce_logsumexp(exp_concrete_samples, axis=-1)
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">TODO: analytical KL(ExpConcrete || ExpConcrete)?</span>
+    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">KL(q || p) = E_q[ln q - ln p]</span>
+    <span style="color: #0000ff;">kl_logodds</span> = tf.reduce_sum(
+      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Sum over batch dimension, leaving [stoch_samples]</span>
+      tf.reduce_mean(tf.reduce_sum(exp_concrete_llik(exp_concrete_samples, weights, temperature), axis=-1) -
+                     tf.reduce_sum(exp_concrete_llik(exp_concrete_samples, tf.ones([1, p]), temperature), axis=-1)))
+
+
+    <span style="color: #0000ff;">mean_samples</span> = tf.reduce_sum(tf.exp(exp_concrete_samples) * mean, axis=[1])
+    <span style="color: #0000ff;">y_prec_samples</span> = 1e-6 + tf.nn.softplus(
+      y_prec_mean + tf.random_normal([stoch_samples]) * tf.sqrt(tf.reciprocal(y_prec_prec)))
+    <span style="color: #0000ff;">llik</span> = tf.reduce_mean(tf.reduce_sum(
+      normal_llik(y_ph, tf.matmul(x_ph, tf.transpose(mean_samples)), y_prec_samples),
+      axis=1))
+
+    <span style="color: #0000ff;">elbo</span> = llik - kl_logodds - kl_mean - kl_effect_prec - kl_y_prec
+
+    <span style="color: #0000ff;">optimizer</span> = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+    <span style="color: #0000ff;">train</span> = optimizer.minimize(-elbo)
+    <span style="color: #0000ff;">trace</span> = [elbo, llik, kl_logodds, kl_mean, kl_effect_prec, kl_y_prec]
+    <span style="color: #0000ff;">opt</span> = [weights / tf.reduce_sum(weights), mean, prec, y_prec_mean, effect_prec_mean]
+
+  <span style="color: #00ff00;">with</span> tf.Session(graph=graph) <span style="color: #00ff00;">as</span> sess:
+    sess.run(tf.global_variables_initializer())
+    <span style="color: #00ff00;">for</span> i <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(num_epochs):
+      <span style="color: #0000ff;">_</span>, <span style="color: #0000ff;">trace_output</span> = sess.run([train, trace], feed_dict={x_ph: x_train, y_ph: y_train})
+      <span style="color: #00ff00;">if</span> np.isnan(trace_output).<span style="color: #00ff00;">any</span>():
+        <span style="color: #00ff00;">raise</span> tf.train.NanLossDuringTrainingError
+      <span style="color: #00ff00;">print</span>(i, *trace_output)
+    <span style="color: #00ff00;">return</span> sess.run(opt)
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4161096" class="outline-2">
+<h2 id="org4161096"><span class="section-number-2">7</span> Projected stochastic gradient descent</h2>
+<div class="outline-text-2" id="text-7">
+<p>
+<b>Idea:</b> We need to take gradient steps for \(\alpha\) restricted to the
+ simplex.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Abhishek Sarkar</p>
+<p class="date">Created: 2017-10-29 Sun 21:15</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

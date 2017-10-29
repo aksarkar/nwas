@@ -1,5 +1,6 @@
 import logging
 
+import nwas.sgvb
 import nwas.models
 import nwas.simulation
 

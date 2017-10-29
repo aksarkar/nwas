@@ -1,5 +1,6 @@
 #+TITLE: NWAS
 
+- [[file:finemap.org][Finemapping idea]]
 - [[file:example.org][Linear regression with spike and slab prior]]
 - [[file:pleiotropy.org][Modeling pleiotropic effects]]
 - [[file:unmediated.org][Modeling uncorrelated, unmediated effects]]
