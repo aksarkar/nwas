@@ -1,4 +1,4 @@
-#+TITLE: Finemapping idea
+#+TITLE: Fine mapping idea
 #+AUTHOR: Abhishek Sarkar
 #+EMAIL: aksarkar@uchicago.edu
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
@@ -11,6 +11,18 @@
 #+HTML_CONTAINER: div
 
 #+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t :exports both
+
+* Proposed model
+
+  Revise the notation, using Latin for the model and Greek for the variational
+  approximation.
+
+  \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
+  \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
+  \[ p(z_k) = \mathrm{Multinomial}(1, \mathbf{p}) \]
+  \[ p(b_{kj}) = N(0, v_b^{-1}) \]
+  \[ q(z_k) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
+  \[ q(b_{kj}) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
 
 * Setup
 
@@ -71,18 +83,6 @@
   : <matplotlib.text.Text at 0x2b137360ec18>
   [[file:spike-slab-fit.png]]
   :END:
-
-* Proposed model
-
-  Revise the notation, using Latin for the model and Greek for the variational
-  approximation.
-
-  \[ p(y \mid x, \mathbf{w}) = N(y; x \mathbf{w}', v^{-1} \mathbf{I}) \]
-  \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
-  \[ p(z_k) = \mathrm{Multinomial}(1, \mathbf{p}) \]
-  \[ p(b_{kj}) = N(0, v_b^{-1}) \]
-  \[ q(z_k) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
-  \[ q(b_{kj}) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
 
 * Coordinate ascent
 
