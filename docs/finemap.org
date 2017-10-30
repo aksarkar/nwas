@@ -19,13 +19,32 @@
 
   \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
   \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
-  \[ p(z_k) = \mathrm{Multinomial}(1, \mathbf{p}) \]
-  \[ p(b_{kj}) = N(0, v_b^{-1}) \]
-  \[ q(z_k) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
-  \[ q(b_{kj}) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
+  \[ p(z_k, \mathbf{p}) = \mathrm{Multinomial}(1, \mathbf{p}) \]
+  \[ p(b_{kj} \mid z_k = 1, v, v_b) = N(0, v^{-1} v_b^{-1}) \]
+  \[ q(z_k \mid \pi) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
+  \[ q(b_{kj} \mid \mu, \phi) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
+
+* Variational lower bound
+
+  \[ \mathrm{ELBO} = \mathbb{E}_q[p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] -
+  KL(q(\mathbf{z}) \Vert p(\mathbf{z})) - KL(q(\mathbf{b}) \Vert p(\mathbf{b}))
+  \]
+  \[ \mathbb{E}_q[p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] = -\frac{v}{2} \sum_i
+  \left(y_i - \sum_j x_{ij} \mathbb{E}_q[w_j]\right)^2 - \sum_{i,j} x_{ij}^2 \mathbb{V}_q[w_j] \]
+
+  \[ \mathbb{E}_q[w_j] = \sum_k \pi_{kj} \mu_{kj} \]
+  \[ \mathbb{V}_q[w_j] = \sum_k \pi_{kj} \phi_{kj}^{-1} + \pi_{kj} (1 - \pi_{kj}) \mu_{kj}^2 \]
+
+  \[ KL(q(\mathbf{z}) \Vert p(\mathbf{z})) = \sum_k E_q[\ln q(z_k) - \ln p(z_k)] \]
+  \[ = \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{k}\right] \]
+  \[ = \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{k} \right) \]
+
+  \[ KL(q(\mathbf{b}) \Vert p(\mathbf{b})) = \frac{1}{2} \sum_{j,k} 1 + \ln (v
+  v_b) - \ln \phi_{kj} + v v_b (\mu_{kj}^2 + \phi_{kj}^{-1})\]
 
 * Setup
 
+  #+NAME: srun
   #+BEGIN_SRC shell :dir (concat (file-name-as-directory (getenv "SCRATCH")) "spikeslab")
   sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
   #!/bin/bash
@@ -35,22 +54,26 @@
   #+END_SRC
 
   #+RESULTS:
-  : Submitted batch job 39619748
+  : Submitted batch job 39720215
 
+  #+NAME: imports
   #+BEGIN_SRC ipython
     %matplotlib inline
+    import edward as ed
     import matplotlib.pyplot as plt
     import nwas
     import numpy as np
+    import pyplink
     import tensorflow as tf
   #+END_SRC
 
-  #+RESULTS:
+  #+RESULTS: imports
   :RESULTS:
   :END:
 
 * Simulated data and existing method
 
+  #+NAME: sim
   #+BEGIN_SRC ipython
     with nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) as s:
       x, y = s.sample_gaussian(n=500)
@@ -62,6 +85,7 @@
   :RESULTS:
   :END:
 
+  #+NAME: sgvb
   #+BEGIN_SRC ipython :ipyfile spike-slab-fit.png
     opt = nwas.sgvb.gaussian_spike_slab(x, y, stoch_samples=10)
 
@@ -87,19 +111,15 @@
 * Coordinate ascent
 
   Between the old approximation and this approximation, the only difference is
-  \(KL\left(q(z)\Vert p(z)\right)\), but it has similar form:
-
-  \[ KL = \sum_k E_q[\ln q(z_k) - \ln p(z_k)] \]
-  \[= \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{kj}\right] \]
-  \[= \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{kj} \right) \]
-
-  This suggests that the same update would work.
+  \(KL\left(q(z)\Vert p(z)\right)\), but it has similar form. This suggests
+  that the same update would work.
 
   The real problem is that the optimization is now constrained to have \(\pi\)
   on the probability simplex, which isn't captured in the objective function.
 
   Normalizing \(\pi_k\) after each update does not increase the ELBO.
 
+  #+NAME: coordinate-ascent
   #+BEGIN_SRC ipython :results output
     def elbo(x, y, pip, mean, var, effect_var, residual_var):
       n, p = x.shape
@@ -108,9 +128,8 @@
       llik = -.5 / residual_var * (np.square(y - genetic_value_mean).sum() - genetic_value_var).sum()
       # Assume prior probability 1/p for each variant
       kl_z = (pip * (np.log(pip) + np.log(p))).sum()
-      kl_b = .5 * (1 + np.log(effect_var) - np.log(var.T) + (np.square(mean) + var.T) / effect_var).sum()
-      print(llik, kl_z, kl_b)
-      return llik - kl_z - kl_b
+      kl_b = .5 * (1 + np.log(effect_var * residual_var) - np.log(var.T) + (np.square(mean) + var.T) / (effect_var * residual_var)).sum()
+      return llik, kl_z, kl_b
 
     def coordinate_ascent(x, y, effect_var, residual_var, l=5, num_epochs=200, verbose=False):
       n, p = x.shape
@@ -130,7 +149,9 @@
           pip[k:k + 1] = (pi * np.exp(.5 * (np.log(var / (effect_var * residual_var)) + np.square(mean[k:k + 1].T) / var))).T
           pip[k] /= pip[k].sum()
           eta += np.dot(x, (pip * mean)[k:k + 1].T)
-        update = elbo(x, y, pip, mean, var, effect_var, residual_var)
+        llik, kl_z, kl_b = elbo(x, y, pip, mean, var, effect_var, residual_var)
+        update = llik - kl_z - kl_b
+        print(epoch, update, llik, kl_z, kl_b)
         if elbo_ is not None and (np.isnan(update) or update <= elbo_):
           print('Halting')
           break
@@ -146,13 +167,14 @@
 
   #+RESULTS:
   :RESULTS:
-  |           llik |         KL(z) |         KL(b) |
-  |----------------+---------------+---------------|
-  | -117713.981064 |  25.352915083 | 12405.8147423 |
-  | -117869.855683 | 25.1308287107 | 12394.2301358 |
+| Epoch |           ELBO |           llik |         KL(z) |         KL(b) |
+|-------+----------------+----------------+---------------+---------------|
+|     0 | -132745.452102 | -117713.981064 |  25.352915083 | 15006.1181232 |
+|     1 | -132897.186438 | -117869.855683 | 25.1308287107 | 15002.1999267 |
+  Halting
   :END:
 
-* Direct optimization with SGD
+* SGVB on same objective
 
   We can optimize the ELBO using gradient descent, but we have to project
   \(\pi\) onto the simplex after each iteration. 
@@ -161,6 +183,7 @@
 
   *TODO:* what's going on with ~KL(b)~?
 
+  #+NAME: categorical-sgvb
   #+BEGIN_SRC ipython :results output
   opt = nwas.sgvb.gaussian_categorical_slab(x, y, l=5)
   #+END_SRC
@@ -181,7 +204,8 @@
   |   900 | -5038.51 | -15.5154 |  0.00095582 | 2.99483 | 1.01352 | 18.8522 | 5000.13 |
   :END:
 
-  #+BEGIN_SRC ipython :results raw drawer
+  #+NAME: categorical-sgvb-opt
+  #+BEGIN_SRC ipython
   opt[0].max(axis=1), opt[0].argmax(axis=1)
   #+END_SRC
 
@@ -191,7 +215,7 @@
   :  array([166, 880, 740, 881, 436]))
   :END:
 
-* Edward
+* Continuous relaxation
 
   In order to make the model amenable to automatic inference, we could use the
   ExpConcrete distribution ([[https://arxiv.org/abs/1611.00712][Maddison et al 2017]], [[https://arxiv.org/abs/1611.01144][Jang et al 2017]]) in place of
@@ -201,8 +225,9 @@
   extra hyperparameters (temperatures).
 
   The solution to this relaxed objective doesn't appear to select any
-  variables, possibly because the KL penalty for \(\bm{z}\) is too strong.
+  variables, possibly because the KL penalty for \(\mathbf{z}\) is too strong.
 
+  #+NAME: expconcrete
   #+BEGIN_SRC ipython :results raw drawer
     def edward_model(x, y, l, learning_rate=1e-5, temperature=0.1):
       y_ = y / y.std()
@@ -240,4 +265,99 @@
   :RESULTS:
   : [TopKV2(values=array([[ 0.00781378,  0.00737324,  0.00698482,  0.00644312,  0.00631097,
   :         0.0053747 ,  0.00509084,  0.00501854,  0.00490211,  0.00486596]], dtype=float32), indices=array([[299, 333, 265, 747, 672, 137, 778, 491, 610, 342]], dtype=int32))]
+  :END:
+
+* Dirichlet-Multinomial model
+
+  *TODO:* investigate a potential simplification of the idea:
+
+  \[ b_j \mid z_j, v, v_b \sim N(0, v^{-1} v_b^{-1}) \]
+  \[ \mathbf{z} \sim DirichletMultinomial(l, \mathbf{a}) \]
+
+  #+NAME: dirichlet-multinomial
+  #+BEGIN_SRC ipython
+    def dm_model(x, y, max_num_causal, num_iters=5000):
+      n, p = x.shape
+      with tf.Graph().as_default(), tf.Session(), tf.variable_scope('model', initializer=tf.random_normal_initializer):
+        max_num_causal = tf.cast(max_num_causal, tf.float32)
+        x_ph = tf.placeholder(tf.float32)
+        z = ed.models.DirichletMultinomial(max_num_causal, tf.ones([1, p]))
+        b = ed.models.Normal(loc=tf.zeros([1, p]), scale=tf.constant(1.))
+        p_y = ed.models.Normal(loc=tf.matmul(x_ph, z * b, transpose_b=True), scale=tf.cast(y.std() / 2, tf.float32))
+
+        q_z = ed.models.Empirical(tf.get_variable('q_z', [num_iters, 1, p]))
+        q_b = ed.models.Empirical(tf.get_variable('q_b', [num_iters, 1, p]))
+
+        inference = ed.HMC(latent_vars={z: q_z, b: q_b}, data={x_ph: x, p_y: y})
+        inference.run(step_size=0.01)
+
+        return ed.get_session().run(tf.reshape(q_z.params, [num_iters, p]))
+
+    trace = dm_model(x, y, 1)
+    trace.mean(axis=1)[:10]
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Harder simulation                                                :noexport:
+
+  Use real LD.
+
+  #+NAME: plink
+  #+BEGIN_SRC shell :dir (concat (file-name-as-directory (getenv "SCRATCH")) "spikeslab") :async t
+    srun --partition=broadwl --mem=8G plink --memory 8000 --vcf /project/compbio/geuvadis/genotypes/GEUVADIS.chr1.PH1PH2_465.IMPFRQFILT_BIALLELIC_PH.annotv2.genotypes.vcf.gz --make-bed --out 1
+  #+END_SRC
+
+  #+RESULTS:
+
+  #+NAME: sim-geuvadis
+  #+BEGIN_SRC ipython
+    geuvadis_chr1 = pyplink.PyPlink(os.path.join(os.getenv('SCRATCH'), 'spikeslab', '1'))
+    x = np.zeros((geuvadis_chr1.get_nb_samples(), 1000), dtype=np.float32)
+    for i, (_, geno) in enumerate(geuvadis_chr1):
+      if i >= x.shape[1]:
+        break
+      geno = np.ma.masked_equal(geno, -1).astype('float32')
+      geno -= geno.mean()
+      x[:,i] = geno.filled(0)
+    s.estimate_mafs(x)
+    s.sample_effects(pve=0.5, annotation_params=[(3, 1)], permute=True)
+    y = s.compute_liabilities(x).reshape(-1, 1)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+  #+NAME: sgvb-geuvadis
+  #+BEGIN_SRC ipython :ipyfile spike-slab-geuvadis.png
+    opt = nwas.sgvb.gaussian_spike_slab(x, y, stoch_samples=10, num_epochs=2000, learning_rate=5e-3, verbose=True)
+
+    plt.clf()
+    q = np.logical_or(s.theta != 0, opt[0].ravel() > 0.1)
+    w = x[:,q]
+    w /= w.std()
+    corr = w.T.dot(w) / x.shape[0]
+    lim = np.abs(corr).max()
+
+    fig, ax = plt.subplots(4, 1, sharex=True)
+    fig.set_size_inches(6, 10)
+    ax[0].bar(np.arange(np.sum(q)), s.theta[q])
+    ax[0].set_ylabel('True effect size')
+    ax[1].bar(np.arange(np.sum(q)), opt[1].ravel()[q])
+    ax[1].set_ylabel('Estimated effect size')
+    ax[2].bar(np.arange(np.sum(q)), opt[0].ravel()[q])
+    ax[2].set_ylabel('Posterior inclusion probability')
+    ax[2].set_xlabel('True and false positive variants')
+    im = ax[3].imshow(np.triu(corr), cmap='RdBu_r', vmin=-lim, vmax=lim)
+    ax[3].set_ylabel('SNP correlation')
+    plt.colorbar(im, ax=ax[3], orientation='horizontal')
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  : <matplotlib.colorbar.Colorbar at 0x7f3b8bd9c278>
+  [[file:spike-slab-geuvadis.png]]
   :END:
