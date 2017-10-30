@@ -1,10 +1,10 @@
-html-strict
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-10-29 Sun 21:15 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<!-- 2017-10-30 Mon 14:03 -->
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Finemapping idea</title>
+<title>Fine mapping idea</title>
 <meta name="generator" content="Org mode">
 <meta name="author" content="Abhishek Sarkar">
 <style type="text/css">
@@ -249,70 +249,88 @@ for the JavaScript code in this tag.
 </head>
 <body>
 <div id="content">
-<h1 class="title">Finemapping idea</h1>
+<h1 class="title">Fine mapping idea</h1>
 <div id="table-of-contents">
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org0ec1ce8">1. Setup</a></li>
-<li><a href="#org259dbe9">2. Simulated data and existing method</a></li>
-<li><a href="#org4007c05">3. Proposed model</a></li>
-<li><a href="#org814355b">4. Coordinate ascent</a></li>
-<li><a href="#org03d36fc">5. Direct optimization with SGD</a></li>
-<li><a href="#orgf4a6d54">6. Relaxation of Categorical variables</a></li>
-<li><a href="#org4161096">7. Projected stochastic gradient descent</a></li>
+<li><a href="#org76749e6">1. Proposed model</a></li>
+<li><a href="#orgeee1ab8">2. Setup</a></li>
+<li><a href="#orga1faac6">3. Simulated data and existing method</a></li>
+<li><a href="#orgae34bdc">4. Coordinate ascent</a></li>
+<li><a href="#orge3b6d17">5. Direct optimization with SGD</a></li>
+<li><a href="#org79404f5">6. Edward</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org0ec1ce8" class="outline-2">
-<h2 id="org0ec1ce8"><span class="section-number-2">1</span> Setup</h2>
+<div id="outline-container-org76749e6" class="outline-2">
+<h2 id="org76749e6"><span class="section-number-2">1</span> Proposed model</h2>
 <div class="outline-text-2" id="text-1">
+<p>
+Revise the notation, using Latin for the model and Greek for the variational
+approximation.
+</p>
+
+<p>
+\[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
+\[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
+\[ p(z_k) = \mathrm{Multinomial}(1, \mathbf{p}) \]
+\[ p(b_{kj}) = N(0, v_b^{-1}) \]
+\[ q(z_k) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
+\[ q(b_{kj}) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgeee1ab8" class="outline-2">
+<h2 id="orgeee1ab8"><span class="section-number-2">2</span> Setup</h2>
+<div class="outline-text-2" id="text-2">
 <div class="org-src-container">
 <pre class="src src-shell">sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
-<span style="color: brightcyan; font-style: italic;">#</span><span style="color: brightcyan; font-style: italic;">!/bin/bash</span>
-<span style="color: #00ff00;">source</span> activate nwas
-rm -f $<span style="color: #0000ff;">HOME</span>/.local/share/jupyter/runtime/kernel-aksarkar.json
-ipython3 kernel --ip=$(<span style="color: #ff00ff;">hostname</span> -i) -f kernel-aksarkar.json
+<span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/bash</span>
+<span class="org-builtin">source</span> activate nwas
+rm -f $<span class="org-variable-name">HOME</span>/.local/share/jupyter/runtime/kernel-aksarkar.json
+ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f kernel-aksarkar.json
 </pre>
 </div>
 
 <div class="org-src-container">
 <pre class="src src-ipython">%matplotlib inline
-<span style="color: #00ff00;">import</span> matplotlib.pyplot <span style="color: #00ff00;">as</span> plt
-<span style="color: #00ff00;">import</span> nwas
-<span style="color: #00ff00;">import</span> numpy <span style="color: #00ff00;">as</span> np
-<span style="color: #00ff00;">import</span> tensorflow <span style="color: #00ff00;">as</span> tf
+<span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
+<span class="org-keyword">import</span> nwas
+<span class="org-keyword">import</span> numpy <span class="org-keyword">as</span> np
+<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org259dbe9" class="outline-2">
-<h2 id="org259dbe9"><span class="section-number-2">2</span> Simulated data and existing method</h2>
-<div class="outline-text-2" id="text-2">
+<div id="outline-container-orga1faac6" class="outline-2">
+<h2 id="orga1faac6"><span class="section-number-2">3</span> Simulated data and existing method</h2>
+<div class="outline-text-2" id="text-3">
 <div class="org-src-container">
-<pre class="src src-ipython"><span style="color: #00ff00;">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span style="color: #00ff00;">as</span> s:
-  <span style="color: #0000ff;">x</span>, <span style="color: #0000ff;">y</span> = s.sample_gaussian(n=500)
-  <span style="color: #0000ff;">x</span> = x.astype(<span style="color: #00ffff;">'float32'</span>)
-  <span style="color: #0000ff;">y</span> = y.reshape(-1, 1).astype(<span style="color: #00ffff;">'float32'</span>)
+<pre class="src src-ipython"><span class="org-keyword">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span class="org-keyword">as</span> s:
+  <span class="org-variable-name">x</span>, <span class="org-variable-name">y</span> = s.sample_gaussian(n=500)
+  <span class="org-variable-name">x</span> = x.astype(<span class="org-string">'float32'</span>)
+  <span class="org-variable-name">y</span> = y.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
 </pre>
 </div>
 
 <div class="org-src-container">
-<pre class="src src-ipython"><span style="color: #0000ff;">opt</span> = nwas.sgvb.gaussian_spike_slab(x, y, stoch_samples=10)
+<pre class="src src-ipython"><span class="org-variable-name">opt</span> = nwas.sgvb.gaussian_spike_slab(x, y, stoch_samples=10)
 
 plt.clf()
-<span style="color: #0000ff;">q</span> = np.logical_or(s.theta != 0, opt[0].ravel() &gt; 0.1)
-<span style="color: #0000ff;">fig</span>, <span style="color: #0000ff;">ax</span> = plt.subplots(3, 1, sharex=<span style="color: #00ffff;">True</span>)
+<span class="org-variable-name">q</span> = np.logical_or(s.theta != 0, opt[0].ravel() &gt; 0.1)
+<span class="org-variable-name">fig</span>, <span class="org-variable-name">ax</span> = plt.subplots(3, 1, sharex=<span class="org-constant">True</span>)
 fig.set_size_inches(6, 8)
-ax[0].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), s.theta[q])
-ax[0].set_ylabel(<span style="color: #00ffff;">'True effect size'</span>)
-ax[1].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), opt[1].ravel()[q])
-ax[1].set_ylabel(<span style="color: #00ffff;">'Estimated effect size'</span>)
-ax[2].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), opt[0].ravel()[q])
-ax[2].set_ylabel(<span style="color: #00ffff;">'Posterior inclusion probability'</span>)
-ax[2].set_xlabel(<span style="color: #00ffff;">'True and false positive variants'</span>)
+ax[0].bar(np.arange(np.<span class="org-builtin">sum</span>(q)), s.theta[q])
+ax[0].set_ylabel(<span class="org-string">'True effect size'</span>)
+ax[1].bar(np.arange(np.<span class="org-builtin">sum</span>(q)), opt[1].ravel()[q])
+ax[1].set_ylabel(<span class="org-string">'Estimated effect size'</span>)
+ax[2].bar(np.arange(np.<span class="org-builtin">sum</span>(q)), opt[0].ravel()[q])
+ax[2].set_ylabel(<span class="org-string">'Posterior inclusion probability'</span>)
+ax[2].set_xlabel(<span class="org-string">'True and false positive variants'</span>)
 </pre>
 </div>
 
@@ -328,31 +346,12 @@ ax[2].set_xlabel(<span style="color: #00ffff;">'True and false positive variants
 </div>
 </div>
 
-<div id="outline-container-org4007c05" class="outline-2">
-<h2 id="org4007c05"><span class="section-number-2">3</span> Proposed model</h2>
-<div class="outline-text-2" id="text-3">
-<p>
-Revise the notation, using Latin for the model and Greek for the variational
-approximation.
-</p>
-
-<p>
-\[ p(y \mid x, \mathbf{w}) = N(y; x \mathbf{w}', v^{-1} \mathbf{I}) \]
-\[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
-\[ p(z_k) = \mathrm{Multinomial}(1, \mathbf{p}) \]
-\[ p(b_{kj}) = N(0, v_b^{-1}) \]
-\[ q(z_k) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
-\[ q(b_{kj}) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
-</p>
-</div>
-</div>
-
-<div id="outline-container-org814355b" class="outline-2">
-<h2 id="org814355b"><span class="section-number-2">4</span> Coordinate ascent</h2>
+<div id="outline-container-orgae34bdc" class="outline-2">
+<h2 id="orgae34bdc"><span class="section-number-2">4</span> Coordinate ascent</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 Between the old approximation and this approximation, the only difference is
-\(KL\left(q(z)\Vert p(z)\right)\), but it has the same form:
+\(KL\left(q(z)\Vert p(z)\right)\), but it has similar form:
 </p>
 
 <p>
@@ -362,184 +361,340 @@ Between the old approximation and this approximation, the only difference is
 </p>
 
 <p>
-This suggests that simply using the same update as the spike-and-slab version
-will work.
+This suggests that the same update would work.
+</p>
+
+<p>
+The real problem is that the optimization is now constrained to have \(\pi\)
+on the probability simplex, which isn't captured in the objective function.
+</p>
+
+<p>
+Normalizing \(\pi_k\) after each update does not increase the ELBO.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ipython"><span style="color: #00ff00;">def</span> <span style="color: #0000ff;">coordinate_ascent</span>(x, y, effect_var, residual_var, l=5, num_epochs=100):
-  <span style="color: #0000ff;">n</span>, <span style="color: #0000ff;">p</span> = x.shape
-  <span style="color: #0000ff;">pi</span> = np.ones((p, 1))
-  <span style="color: #0000ff;">d</span> = np.einsum(<span style="color: #00ffff;">'ij,ij-&gt;j'</span>, x, x).reshape(-1, 1)
-  <span style="color: #0000ff;">xy</span> = x.T.dot(y)
-  <span style="color: #0000ff;">pip</span> = np.zeros((l, p))
-  <span style="color: #0000ff;">mean</span> = np.zeros((l, p))
-  <span style="color: #0000ff;">eta</span> = np.dot(x, (pip * mean).<span style="color: #00ff00;">sum</span>(axis=0, keepdims=<span style="color: #00ffff;">True</span>).T)
-  <span style="color: #00ff00;">for</span> _ <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(num_epochs):
-    <span style="color: #00ff00;">for</span> k <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(l):
-      <span style="color: #0000ff;">eta</span> -= np.dot(x, (pip * mean)[k:k + 1].T)
-      <span style="color: #0000ff;">var</span> = effect_var * residual_var / (effect_var * d + 1)
-      <span style="color: #0000ff;">mean</span>[k:k + 1] = (var / residual_var * (xy - x.T.dot(eta))).T
-      <span style="color: #0000ff;">pip</span>[k:k + 1] = (pi * np.exp(.5 * (np.log(var / (effect_var * residual_var)) + np.square(mean[k:k + 1].T) / var))).T
-      <span style="color: #0000ff;">pip</span>[k] /= pip[k].<span style="color: #00ff00;">sum</span>()
-      <span style="color: #0000ff;">eta</span> += np.dot(x, (pip * mean)[k:k + 1].T)
-  <span style="color: #00ff00;">return</span> pip, mean, var
+<pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">elbo</span>(x, y, pip, mean, var, effect_var, residual_var):
+  <span class="org-variable-name">n</span>, <span class="org-variable-name">p</span> = x.shape
+  <span class="org-variable-name">genetic_value_mean</span> = np.dot(x, (pip * mean).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
+  <span class="org-variable-name">genetic_value_var</span> = np.dot(np.square(x), (pip * var.T + pip * (1 - pip) * np.square(mean)).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
+  <span class="org-variable-name">llik</span> = -.5 / residual_var * (np.square(y - genetic_value_mean).<span class="org-builtin">sum</span>() - genetic_value_var).<span class="org-builtin">sum</span>()
+  <span class="org-comment-delimiter"># </span><span class="org-comment">Assume prior probability 1/p for each variant</span>
+  <span class="org-variable-name">kl_z</span> = (pip * (np.log(pip) + np.log(p))).<span class="org-builtin">sum</span>()
+  <span class="org-variable-name">kl_b</span> = .5 * (1 + np.log(effect_var) - np.log(var.T) + (np.square(mean) + var.T) / effect_var).<span class="org-builtin">sum</span>()
+  <span class="org-keyword">print</span>(llik, kl_z, kl_b)
+  <span class="org-keyword">return</span> llik - kl_z - kl_b
 
-<span style="color: #0000ff;">opt1</span> = coordinate_ascent(x, y, 1, s.residual_var)
+<span class="org-keyword">def</span> <span class="org-function-name">coordinate_ascent</span>(x, y, effect_var, residual_var, l=5, num_epochs=200, verbose=<span class="org-constant">False</span>):
+  <span class="org-variable-name">n</span>, <span class="org-variable-name">p</span> = x.shape
+  <span class="org-variable-name">pi</span> = np.ones((p, 1))
+  <span class="org-variable-name">d</span> = np.einsum(<span class="org-string">'ij,ij-&gt;j'</span>, x, x).reshape(-1, 1)
+  <span class="org-variable-name">xy</span> = x.T.dot(y)
+  <span class="org-variable-name">pip</span> = np.zeros((l, p))
+  <span class="org-variable-name">mean</span> = np.zeros((l, p))
+  <span class="org-comment-delimiter"># </span><span class="org-comment">Make sure everything is two dimensional to catch numpy broadcasting gotchas</span>
+  <span class="org-variable-name">var</span> = (effect_var * residual_var / (effect_var * d + 1)).reshape(-1, 1)
+  <span class="org-variable-name">eta</span> = np.dot(x, (pip * mean).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
+  <span class="org-variable-name">elbo_</span> = <span class="org-constant">None</span>
+  <span class="org-keyword">for</span> epoch <span class="org-keyword">in</span> <span class="org-builtin">range</span>(num_epochs):
+    <span class="org-keyword">for</span> k <span class="org-keyword">in</span> <span class="org-builtin">range</span>(l):
+      <span class="org-variable-name">eta</span> -= np.dot(x, (pip * mean)[k:k + 1].T)
+      <span class="org-variable-name">mean</span>[k:k + 1] = (var / residual_var * (xy - x.T.dot(eta))).T
+      <span class="org-variable-name">pip</span>[k:k + 1] = (pi * np.exp(.5 * (np.log(var / (effect_var * residual_var)) + np.square(mean[k:k + 1].T) / var))).T
+      <span class="org-variable-name">pip</span>[k] /= pip[k].<span class="org-builtin">sum</span>()
+      <span class="org-variable-name">eta</span> += np.dot(x, (pip * mean)[k:k + 1].T)
+    <span class="org-variable-name">update</span> = elbo(x, y, pip, mean, var, effect_var, residual_var)
+    <span class="org-keyword">if</span> elbo_ <span class="org-keyword">is</span> <span class="org-keyword">not</span> <span class="org-constant">None</span> <span class="org-keyword">and</span> (np.isnan(update) <span class="org-keyword">or</span> update &lt;= elbo_):
+      <span class="org-keyword">print</span>(<span class="org-string">'Halting'</span>)
+      <span class="org-keyword">break</span>
+    <span class="org-keyword">else</span>:
+      <span class="org-variable-name">elbo_</span> = update
+  <span class="org-keyword">return</span> {<span class="org-string">'pip'</span>: pip,
+          <span class="org-string">'mean'</span>: mean,
+          <span class="org-string">'var'</span>: var,
+          <span class="org-string">'elbo'</span>: elbo_}
+
+<span class="org-variable-name">opt</span> = coordinate_ascent(x, y, 1, s.residual_var)
 </pre>
 </div>
 
+<table>
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">llik</th>
+<th scope="col" class="org-right">KL(z)</th>
+<th scope="col" class="org-right">KL(b)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">-117713.981064</td>
+<td class="org-right">25.352915083</td>
+<td class="org-right">12405.8147423</td>
+</tr>
+
+<tr>
+<td class="org-right">-117869.855683</td>
+<td class="org-right">25.1308287107</td>
+<td class="org-right">12394.2301358</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div id="outline-container-orge3b6d17" class="outline-2">
+<h2 id="orge3b6d17"><span class="section-number-2">5</span> Direct optimization with SGD</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+We can optimize the ELBO using gradient descent, but we have to project
+\(\pi\) onto the simplex after each iteration. 
+</p>
+
+<p>
+This solution doesn't appear to select any variables.
+</p>
+
+<p>
+<b>TODO:</b> what's going on with <code>KL(b)</code>?
+</p>
+
 <div class="org-src-container">
-<pre class="src src-ipython">plt.clf()
-<span style="color: #0000ff;">fig</span>, <span style="color: #0000ff;">ax</span> = plt.subplots(2, 1, sharex=<span style="color: #00ffff;">True</span>)
-fig.set_size_inches(6, 8)
-ax[0].bar(np.arange(np.<span style="color: #00ff00;">sum</span>(q)), s.theta[q])
-ax[0].set_ylabel(<span style="color: #00ffff;">'True effect size'</span>)
-<span style="color: #0000ff;">im</span> = ax[1].imshow(opt1[0][:,q], cmap=<span style="color: #00ffff;">'Reds'</span>)
-ax[1].set_ylabel(<span style="color: #00ffff;">'One-hot causal SNP indicators'</span>)
-ax[1].set_xlabel(<span style="color: #00ffff;">'True and false positive variants'</span>)
-<span style="color: #0000ff;">cbar</span> = plt.gcf().colorbar(im, ax=ax[1], orientation=<span style="color: #00ffff;">'horizontal'</span>)
-cbar.ax.set_xlabel(<span style="color: #00ffff;">'Posterior inclusion probability'</span>)
+<pre class="src src-ipython"><span class="org-variable-name">opt</span> = nwas.sgvb.gaussian_categorical_slab(x, y, l=5)
+</pre>
+</div>
+
+<table>
+
+
+<colgroup>
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+
+<col  class="org-right">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">Epoch</th>
+<th scope="col" class="org-right">ELBO</th>
+<th scope="col" class="org-right">llik</th>
+<th scope="col" class="org-right">R</th>
+<th scope="col" class="org-right">KL(v)</th>
+<th scope="col" class="org-right">KL(v<sub>b</sub>)</th>
+<th scope="col" class="org-right">KL(z)</th>
+<th scope="col" class="org-right">KL(b)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">0</td>
+<td class="org-right">-31616.9</td>
+<td class="org-right">-8184.2</td>
+<td class="org-right">-83.5247</td>
+<td class="org-right">1.03809</td>
+<td class="org-right">1.03809</td>
+<td class="org-right">15764.1</td>
+<td class="org-right">7666.5</td>
+</tr>
+
+<tr>
+<td class="org-right">100</td>
+<td class="org-right">-5466.45</td>
+<td class="org-right">-21.7072</td>
+<td class="org-right">-0.00486338</td>
+<td class="org-right">1.06517</td>
+<td class="org-right">1.1396</td>
+<td class="org-right">18.8546</td>
+<td class="org-right">5423.68</td>
+</tr>
+
+<tr>
+<td class="org-right">200</td>
+<td class="org-right">-5081.73</td>
+<td class="org-right">-18.489</td>
+<td class="org-right">0.00123519</td>
+<td class="org-right">1.71877</td>
+<td class="org-right">1.03829</td>
+<td class="org-right">18.8523</td>
+<td class="org-right">5041.63</td>
+</tr>
+
+<tr>
+<td class="org-right">300</td>
+<td class="org-right">-5042.73</td>
+<td class="org-right">-18.4033</td>
+<td class="org-right">0.00186509</td>
+<td class="org-right">2.71956</td>
+<td class="org-right">1.01052</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5001.75</td>
+</tr>
+
+<tr>
+<td class="org-right">400</td>
+<td class="org-right">-5039.48</td>
+<td class="org-right">-16.6873</td>
+<td class="org-right">0.000676155</td>
+<td class="org-right">2.83859</td>
+<td class="org-right">1.00315</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5000.1</td>
+</tr>
+
+<tr>
+<td class="org-right">500</td>
+<td class="org-right">-5038.41</td>
+<td class="org-right">-15.624</td>
+<td class="org-right">0.00157309</td>
+<td class="org-right">2.81707</td>
+<td class="org-right">1.00042</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5000.11</td>
+</tr>
+
+<tr>
+<td class="org-right">600</td>
+<td class="org-right">-5040.08</td>
+<td class="org-right">-17.2356</td>
+<td class="org-right">0.000780165</td>
+<td class="org-right">2.86988</td>
+<td class="org-right">1.00021</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5000.12</td>
+</tr>
+
+<tr>
+<td class="org-right">700</td>
+<td class="org-right">-5040.78</td>
+<td class="org-right">-17.9397</td>
+<td class="org-right">0.00160074</td>
+<td class="org-right">2.89161</td>
+<td class="org-right">1.00254</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5000.1</td>
+</tr>
+
+<tr>
+<td class="org-right">800</td>
+<td class="org-right">-5038.4</td>
+<td class="org-right">-15.5763</td>
+<td class="org-right">0.00114691</td>
+<td class="org-right">2.87492</td>
+<td class="org-right">1.00723</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5000.09</td>
+</tr>
+
+<tr>
+<td class="org-right">900</td>
+<td class="org-right">-5038.51</td>
+<td class="org-right">-15.5154</td>
+<td class="org-right">0.00095582</td>
+<td class="org-right">2.99483</td>
+<td class="org-right">1.01352</td>
+<td class="org-right">18.8522</td>
+<td class="org-right">5000.13</td>
+</tr>
+</tbody>
+</table>
+
+<div class="org-src-container">
+<pre class="src src-ipython">opt[0].<span class="org-builtin">max</span>(axis=1), opt[0].argmax(axis=1)
 </pre>
 </div>
 
 <pre class="example">
-&lt;matplotlib.text.Text at 0x2b137ca26a58&gt;
+(array([ 0.09879258,  0.08785395,  0.09147501,  0.06612478,  0.0979613 ], dtype=float32),
+ array([166, 880, 740, 881, 436]))
 
 </pre>
-
-<div class="figure">
-<p><img src="coordinate-ascent-opt.png" alt="coordinate-ascent-opt.png">
-</p>
-</div>
-
-<p>
-<b>Open question:</b> If this term has the same form as the spike-and-slab version
-(take Bernoulli to be Multinomial with two classes), then is it really going
-to give a different answer?
-</p>
-
-<p>
-<b>Open question:</b> Why is \(\beta\) not shared?
-</p>
-
-<p>
-<b>Open question:</b> Can we just use \(\mathrm{Multinomial}(l, \pi)\) ?
-</p>
 </div>
 </div>
 
-<div id="outline-container-org03d36fc" class="outline-2">
-<h2 id="org03d36fc"><span class="section-number-2">5</span> Direct optimization with SGD</h2>
-</div>
-
-<div id="outline-container-orgf4a6d54" class="outline-2">
-<h2 id="orgf4a6d54"><span class="section-number-2">6</span> Relaxation of Categorical variables</h2>
+<div id="outline-container-org79404f5" class="outline-2">
+<h2 id="org79404f5"><span class="section-number-2">6</span> Edward</h2>
 <div class="outline-text-2" id="text-6">
 <p>
-In order to make the model amenable to SGVB, we could use the ExpConcrete
-distribution (<a href="https://arxiv.org/abs/1611.00712">Maddison et al 2017</a>, <a href="https://arxiv.org/abs/1611.01144">Jang et al 2017</a>) in place of the
-Categorical distribution.
+In order to make the model amenable to automatic inference, we could use the
+ExpConcrete distribution (<a href="https://arxiv.org/abs/1611.00712">Maddison et al 2017</a>, <a href="https://arxiv.org/abs/1611.01144">Jang et al 2017</a>) in place of
+the Categorical distribution.
 </p>
 
 <p>
-This will be important for using it as a building block in larger models.
+We avoid the problem of constrained optimization, but then have to deal with
+extra hyperparameters (temperatures).
+</p>
+
+<p>
+The solution to this relaxed objective doesn't appear to select any
+variables, possibly because the KL penalty for \(\bm{z}\) is too strong.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ipython"><span style="color: #00ff00;">def</span> <span style="color: #0000ff;">exp_concrete_llik</span>(y, weights, temperature):
-  <span style="color: brightcyan; font-style: italic;">"""Appendix C.3"""</span>
-  <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">This hack is needed because the type of y.shape isn't Tensor</span>
-  <span style="color: #0000ff;">n</span> = <span style="color: #00ff00;">float</span>(<span style="color: #00ff00;">int</span>(y.shape[-1]))
-  <span style="color: #00ff00;">return</span> (tf.lgamma(n) + (n - 1.) * tf.log(temperature) +
-          <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Sum on the event dimension, leaving [stoch_samples, l]</span>
-          tf.reduce_sum(tf.nn.log_softmax(tf.log(weights) - temperature * y), -1))
+<pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">edward_model</span>(x, y, l, learning_rate=1e-5, temperature=0.1):
+  <span class="org-variable-name">y_</span> = y / y.std()
+  <span class="org-keyword">with</span> tf.Graph().as_default(), tf.Session(), tf.variable_scope(<span class="org-string">'model'</span>, initializer=tf.random_normal_initializer):
+    <span class="org-variable-name">n</span>, <span class="org-variable-name">p</span> = x.shape
+    <span class="org-variable-name">x_ph</span> = tf.placeholder(tf.float32)
+    <span class="org-variable-name">p_z</span> = ed.models.ExpRelaxedOneHotCategorical(
+      temperature=temperature,
+      logits=tf.fill([l, p], 1.))
+    <span class="org-variable-name">p_b</span> = ed.models.Normal(
+      loc=tf.zeros([l, p]),
+      scale=nwas.sgvb.biased_softplus(tf.get_variable(<span class="org-string">'s_b'</span>, [1])))
+    <span class="org-variable-name">w</span> = tf.transpose(tf.reduce_sum(p_z * p_b, axis=0, keep_dims=<span class="org-constant">True</span>))
+    <span class="org-variable-name">p_y</span> = ed.models.Normal(
+      loc=tf.matmul(x, w),
+      scale=tf.constant(1.))
 
-<span style="color: #00ff00;">def</span> <span style="color: #0000ff;">normal_llik</span>(y, mean, prec):
-  <span style="color: #00ff00;">return</span> -.5 * (-tf.log(prec) + tf.square(y - mean) * prec)
+    <span class="org-variable-name">q_z</span> = ed.models.ExpRelaxedOneHotCategorical(
+      temperature=temperature,
+      logits=nwas.sgvb.biased_softplus(tf.get_variable(<span class="org-string">'pi'</span>, [l, p])))
+    <span class="org-variable-name">q_b</span> = ed.models.Normal(
+      loc=tf.get_variable(<span class="org-string">'mu'</span>, [l, p]),
+      scale=nwas.sgvb.biased_softplus(tf.get_variable(<span class="org-string">'sigma_b'</span>, [l, p])))
 
-<span style="color: #00ff00;">def</span> <span style="color: #0000ff;">kl_normal_normal</span>(mean_a, prec_a, mean_b, prec_b):
-  <span style="color: #00ff00;">return</span> .5 * tf.reduce_sum(1 + tf.log(prec_a) - tf.log(prec_b) + (tf.square(mean_a - mean_b) + 1 / prec_a))
+    <span class="org-variable-name">vb</span> = ed.KLqp(latent_vars={p_z: q_z, p_b: q_b}, data={x_ph: x, p_y: y_})
+    vb.initialize(optimizer=tf.train.RMSPropOptimizer(learning_rate=learning_rate))
+    vb.run()
+    <span class="org-keyword">return</span> ed.get_session().run([tf.nn.top_k(q_z.probs, k=10)])
 
-<span style="color: #00ff00;">def</span> <span style="color: #0000ff;">fit</span>(x, y, l, num_epochs=1000, stoch_samples=50, learning_rate=1e-3):
-  <span style="color: brightcyan; font-style: italic;">"""Fit the model assuming l causal variants"""</span>
-  <span style="color: #0000ff;">graph</span> = tf.Graph()
-  <span style="color: #00ff00;">with</span> graph.as_default():
-    <span style="color: #0000ff;">x_ph</span> = tf.placeholder(tf.float32)
-    <span style="color: #0000ff;">y_ph</span> = tf.placeholder(tf.float32)
-
-    <span style="color: #00ff00;">with</span> tf.variable_scope(<span style="color: #00ffff;">'q'</span>, initializer=tf.random_normal_initializer):
-      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Residual inverse variance</span>
-      <span style="color: #0000ff;">y_prec_mean</span> = tf.get_variable(<span style="color: #00ffff;">'y_prec_mean'</span>, [1])
-      <span style="color: #0000ff;">y_prec_prec</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'y_prec_prec'</span>, [1]))
-      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Effect size inverse variance</span>
-      <span style="color: #0000ff;">effect_prec_mean</span> = tf.get_variable(<span style="color: #00ffff;">'effect_prec_mean'</span>, [1])
-      <span style="color: #0000ff;">effect_prec_prec</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'effect_prec_prec'</span>, [1]))
-      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">ExpConcrete indicator (relaxation of Categorical)</span>
-      <span style="color: #0000ff;">weights</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'logodds'</span>, [l, p]))
-      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Gaussian effect size</span>
-      <span style="color: #0000ff;">mean</span> = tf.get_variable(<span style="color: #00ffff;">'mean'</span>, [l, p])
-      <span style="color: #0000ff;">prec</span> = 1e-6 + tf.nn.softplus(tf.get_variable(<span style="color: #00ffff;">'prec'</span>, [l, p]))
-
-    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">TODO: priors appear only in the KL terms which is tricky for</span>
-    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">reading/understanding, but bayesflow doesn't DTRT</span>
-    <span style="color: #0000ff;">kl_y_prec</span> = kl_normal_normal(y_prec_mean, y_prec_prec, tf.constant(0.), tf.constant(1.))
-    <span style="color: #0000ff;">kl_effect_prec</span> = kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))
-    <span style="color: #0000ff;">kl_mean</span> = kl_normal_normal(mean, prec, tf.constant(0.), 1e-6 + tf.nn.softplus(effect_prec_mean))
-
-    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">TODO: non-fixed temperature?</span>
-    <span style="color: #0000ff;">temperature</span> = tf.constant(0.5)
-    <span style="color: #0000ff;">gumbel_samples</span> = -tf.log(-tf.log(tf.random_uniform([stoch_samples, l, p])))
-    <span style="color: #0000ff;">exp_concrete_samples</span> = (tf.log(weights) + gumbel_samples) / temperature
-    <span style="color: #0000ff;">exp_concrete_samples</span> -= tf.reduce_logsumexp(exp_concrete_samples, axis=-1)
-    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">TODO: analytical KL(ExpConcrete || ExpConcrete)?</span>
-    <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">KL(q || p) = E_q[ln q - ln p]</span>
-    <span style="color: #0000ff;">kl_logodds</span> = tf.reduce_sum(
-      <span style="color: brightcyan; font-style: italic;"># </span><span style="color: brightcyan; font-style: italic;">Sum over batch dimension, leaving [stoch_samples]</span>
-      tf.reduce_mean(tf.reduce_sum(exp_concrete_llik(exp_concrete_samples, weights, temperature), axis=-1) -
-                     tf.reduce_sum(exp_concrete_llik(exp_concrete_samples, tf.ones([1, p]), temperature), axis=-1)))
-
-
-    <span style="color: #0000ff;">mean_samples</span> = tf.reduce_sum(tf.exp(exp_concrete_samples) * mean, axis=[1])
-    <span style="color: #0000ff;">y_prec_samples</span> = 1e-6 + tf.nn.softplus(
-      y_prec_mean + tf.random_normal([stoch_samples]) * tf.sqrt(tf.reciprocal(y_prec_prec)))
-    <span style="color: #0000ff;">llik</span> = tf.reduce_mean(tf.reduce_sum(
-      normal_llik(y_ph, tf.matmul(x_ph, tf.transpose(mean_samples)), y_prec_samples),
-      axis=1))
-
-    <span style="color: #0000ff;">elbo</span> = llik - kl_logodds - kl_mean - kl_effect_prec - kl_y_prec
-
-    <span style="color: #0000ff;">optimizer</span> = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-    <span style="color: #0000ff;">train</span> = optimizer.minimize(-elbo)
-    <span style="color: #0000ff;">trace</span> = [elbo, llik, kl_logodds, kl_mean, kl_effect_prec, kl_y_prec]
-    <span style="color: #0000ff;">opt</span> = [weights / tf.reduce_sum(weights), mean, prec, y_prec_mean, effect_prec_mean]
-
-  <span style="color: #00ff00;">with</span> tf.Session(graph=graph) <span style="color: #00ff00;">as</span> sess:
-    sess.run(tf.global_variables_initializer())
-    <span style="color: #00ff00;">for</span> i <span style="color: #00ff00;">in</span> <span style="color: #00ff00;">range</span>(num_epochs):
-      <span style="color: #0000ff;">_</span>, <span style="color: #0000ff;">trace_output</span> = sess.run([train, trace], feed_dict={x_ph: x_train, y_ph: y_train})
-      <span style="color: #00ff00;">if</span> np.isnan(trace_output).<span style="color: #00ff00;">any</span>():
-        <span style="color: #00ff00;">raise</span> tf.train.NanLossDuringTrainingError
-      <span style="color: #00ff00;">print</span>(i, *trace_output)
-    <span style="color: #00ff00;">return</span> sess.run(opt)
+<span class="org-variable-name">opt</span> = edward_model(x, y, l=1)
+opt
 </pre>
 </div>
-</div>
-</div>
 
-<div id="outline-container-org4161096" class="outline-2">
-<h2 id="org4161096"><span class="section-number-2">7</span> Projected stochastic gradient descent</h2>
-<div class="outline-text-2" id="text-7">
-<p>
-<b>Idea:</b> We need to take gradient steps for \(\alpha\) restricted to the
- simplex.
-</p>
+<pre class="example">
+[TopKV2(values=array([[ 0.00781378,  0.00737324,  0.00698482,  0.00644312,  0.00631097,
+        0.0053747 ,  0.00509084,  0.00501854,  0.00490211,  0.00486596]], dtype=float32), indices=array([[299, 333, 265, 747, 672, 137, 778, 491, 610, 342]], dtype=int32))]
+
+</pre>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-10-29 Sun 21:15</p>
+<p class="date">Created: 2017-10-30 Mon 14:03</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
