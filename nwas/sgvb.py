@@ -66,10 +66,10 @@ def gaussian_spike_slab(x, y, num_epochs=1000, learning_rate=1e-2, stoch_samples
 
     llik = tf.reduce_mean(tf.reduce_sum(normal_llik(y_ph, eta, phi), axis=0))
     kl_terms = [
-      tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds), axis=0),
-      tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec), axis=0),
-      kl_normal_normal(logodds_mean, logodds_prec, tf.constant(0.), tf.constant(1.)),
-      kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.)),
+      tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds)),
+      tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec)),
+      tf.reduce_sum(kl_normal_normal(logodds_mean, logodds_prec, tf.constant(0.), tf.constant(1.))),
+      tf.reduce_sum(kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))),
     ]
     elbo = llik - tf.add_n(kl_terms)
 
@@ -78,7 +78,7 @@ def gaussian_spike_slab(x, y, num_epochs=1000, learning_rate=1e-2, stoch_samples
 
     optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     train = optimizer.minimize(-elbo)
-    trace = [elbo, llik] + kl_terms + [R]
+    trace = [elbo, llik, R] + kl_terms
     opt = [pip, effect_posterior_mean, effect_posterior_var, odds, effect_prec, elbo]
 
     with tf.Session() as sess:

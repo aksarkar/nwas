@@ -10,7 +10,7 @@
 #+HTML_DOCTYPE: html5
 #+HTML_CONTAINER: div
 
-#+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t :exports both
+#+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t :exports both :eval never-export
 
 * Proposed model
 
@@ -19,17 +19,19 @@
 
   \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
   \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
-  \[ p(z_k, \mathbf{p}) = \mathrm{Multinomial}(1, \mathbf{p}) \]
-  \[ p(b_{kj} \mid z_k = 1, v, v_b) = N(0, v^{-1} v_b^{-1}) \]
-  \[ q(z_k \mid \pi) = \mathrm{Multinomial}(1, \mathbf{\pi}) \]
-  \[ q(b_{kj} \mid \mu, \phi) = N(\mu_{kj}, \phi_{kj}^{-1}) \]
+  \[ p(b_{kj} \mid z_k = 1, v, v_b) = N(b_{kj}; 0, v^{-1} v_b^{-1}) \]
+  \[ p(b_{kj} \mid z_k = 0) = \delta(b_{kj}) \]
+  \[ p(z_k, \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
+
+  \[ q(b_{kj} \mid \mu, \phi) = N(b_{kj}; \mu_{kj}, \phi_{kj}^{-1}) \]
+  \[ q(z_k \mid \pi) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
 
 * Variational lower bound
 
-  \[ \mathrm{ELBO} = \mathbb{E}_q[p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] -
-  KL(q(\mathbf{z}) \Vert p(\mathbf{z})) - KL(q(\mathbf{b}) \Vert p(\mathbf{b}))
+  \[ \mathrm{ELBO} = \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] -
+  KL(q(\mathbf{z}) \Vert p(\mathbf{z})) - KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z}))
   \]
-  \[ \mathbb{E}_q[p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] = -\frac{v}{2} \sum_i
+  \[ \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] = -\frac{v}{2} \sum_i
   \left(y_i - \sum_j x_{ij} \mathbb{E}_q[w_j]\right)^2 - \sum_{i,j} x_{ij}^2 \mathbb{V}_q[w_j] \]
 
   \[ \mathbb{E}_q[w_j] = \sum_k \pi_{kj} \mu_{kj} \]
@@ -39,8 +41,8 @@
   \[ = \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{k}\right] \]
   \[ = \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{k} \right) \]
 
-  \[ KL(q(\mathbf{b}) \Vert p(\mathbf{b})) = \frac{1}{2} \sum_{j,k} 1 + \ln (v
-  v_b) - \ln \phi_{kj} + v v_b (\mu_{kj}^2 + \phi_{kj}^{-1})\]
+  \[ KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z})) =
+  \frac{1}{2} \sum_{j,k} \pi_{kj} \left(1 + \ln (v v_b) - \ln \phi_{kj} + v v_b (\mu_{kj}^2 + \phi_{kj}^{-1}) \right)\]
 
 * Setup
 
@@ -53,8 +55,8 @@
   ipython3 kernel --ip=$(hostname -i) -f kernel-aksarkar.json
   #+END_SRC
 
-  #+RESULTS:
-  : Submitted batch job 39720215
+  #+RESULTS: srun
+  : Submitted batch job 39733997
 
   #+NAME: imports
   #+BEGIN_SRC ipython
@@ -63,6 +65,7 @@
     import matplotlib.pyplot as plt
     import nwas
     import numpy as np
+    import pandas as pd
     import pyplink
     import tensorflow as tf
   #+END_SRC
@@ -81,7 +84,7 @@
       y = y.reshape(-1, 1).astype('float32')
   #+END_SRC
 
-  #+RESULTS:
+  #+RESULTS: sim
   :RESULTS:
   :END:
 
@@ -102,7 +105,7 @@
     ax[2].set_xlabel('True and false positive variants')
   #+END_SRC
 
-  #+RESULTS:
+  #+RESULTS: sgvb
   :RESULTS:
   : <matplotlib.text.Text at 0x2b137360ec18>
   [[file:spike-slab-fit.png]]
@@ -120,18 +123,18 @@
   Normalizing \(\pi_k\) after each update does not increase the ELBO.
 
   #+NAME: coordinate-ascent
-  #+BEGIN_SRC ipython :results output
+  #+BEGIN_SRC ipython :results raw drawer
     def elbo(x, y, pip, mean, var, effect_var, residual_var):
       n, p = x.shape
       genetic_value_mean = np.dot(x, (pip * mean).sum(axis=0, keepdims=True).T)
       genetic_value_var = np.dot(np.square(x), (pip * var.T + pip * (1 - pip) * np.square(mean)).sum(axis=0, keepdims=True).T)
-      llik = -.5 / residual_var * (np.square(y - genetic_value_mean).sum() - genetic_value_var).sum()
+      llik = -.5 / residual_var * (np.square(y - genetic_value_mean) - genetic_value_var).sum()
       # Assume prior probability 1/p for each variant
       kl_z = (pip * (np.log(pip) + np.log(p))).sum()
-      kl_b = .5 * (1 + np.log(effect_var * residual_var) - np.log(var.T) + (np.square(mean) + var.T) / (effect_var * residual_var)).sum()
+      kl_b = .5 * (pip * (1 + np.log(effect_var * residual_var) - np.log(var.T) + (np.square(mean) + var.T) / (effect_var * residual_var))).sum()
       return llik, kl_z, kl_b
 
-    def coordinate_ascent(x, y, effect_var, residual_var, l=5, num_epochs=200, verbose=False):
+    def coordinate_ascent(x, y, effect_var, residual_var, l=5, num_epochs=200):
       n, p = x.shape
       pi = np.ones((p, 1))
       d = np.einsum('ij,ij->j', x, x).reshape(-1, 1)
@@ -142,6 +145,7 @@
       var = (effect_var * residual_var / (effect_var * d + 1)).reshape(-1, 1)
       eta = np.dot(x, (pip * mean).sum(axis=0, keepdims=True).T)
       elbo_ = None
+      trace = []
       for epoch in range(num_epochs):
         for k in range(l):
           eta -= np.dot(x, (pip * mean)[k:k + 1].T)
@@ -151,27 +155,96 @@
           eta += np.dot(x, (pip * mean)[k:k + 1].T)
         llik, kl_z, kl_b = elbo(x, y, pip, mean, var, effect_var, residual_var)
         update = llik - kl_z - kl_b
-        print(epoch, update, llik, kl_z, kl_b)
-        if elbo_ is not None and (np.isnan(update) or update <= elbo_):
-          print('Halting')
-          break
-        else:
-          elbo_ = update
+        trace.append([update, llik, kl_z, kl_b])
+        elbo_ = update
       return {'pip': pip,
-              'mean': mean,
+              'mean': pip * mean,
               'var': var,
-              'elbo': elbo_}
+              'elbo': elbo_,
+              'trace': trace}
 
-    opt = coordinate_ascent(x, y, 1, s.residual_var)
+    opt = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=50)
+    pd.DataFrame(opt['trace'], columns=['elbo', 'llik', 'kl_z', 'kl_b'])
+  #+END_SRC
+
+  #+RESULTS: coordinate-ascent
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+            elbo        llik       kl_z       kl_b
+    0  -268.129734 -226.243188  25.352915  16.533631
+    1  -268.576104 -226.869986  25.130829  16.575289
+    2  -268.640320 -226.956885  25.105590  16.577845
+    3  -268.635618 -226.929528  25.125407  16.580682
+    4  -268.617950 -226.879634  25.153811  16.584505
+    5  -268.593716 -226.816238  25.188131  16.589346
+    6  -268.535093 -226.682496  25.255828  16.596769
+    7  -268.360134 -226.292446  25.456290  16.611398
+    8  -268.081829 -225.462570  25.979514  16.639745
+    9  -268.019034 -224.800028  26.550398  16.668607
+    10 -268.009283 -224.555344  26.772253  16.681686
+    11 -267.999291 -224.491291  26.823079  16.684921
+    12 -267.993970 -224.475539  26.832927  16.685504
+    13 -267.991463 -224.470977  26.834897  16.685590
+    14 -267.990315 -224.469352  26.835366  16.685597
+    15 -267.989792 -224.468687  26.835509  16.685596
+    16 -267.989555 -224.468398  26.835563  16.685594
+    17 -267.989447 -224.468268  26.835585  16.685593
+    18 -267.989398 -224.468210  26.835595  16.685593
+    19 -267.989376 -224.468183  26.835600  16.685593
+    20 -267.989366 -224.468171  26.835602  16.685593
+    21 -267.989361 -224.468166  26.835603  16.685593
+    22 -267.989359 -224.468163  26.835603  16.685593
+    23 -267.989358 -224.468162  26.835603  16.685593
+    24 -267.989358 -224.468162  26.835603  16.685593
+    25 -267.989358 -224.468162  26.835603  16.685593
+    26 -267.989357 -224.468162  26.835603  16.685593
+    27 -267.989357 -224.468161  26.835603  16.685593
+    28 -267.989357 -224.468161  26.835603  16.685593
+    29 -267.989357 -224.468161  26.835603  16.685593
+    30 -267.989357 -224.468161  26.835603  16.685593
+    31 -267.989357 -224.468161  26.835603  16.685593
+    32 -267.989357 -224.468161  26.835603  16.685593
+    33 -267.989357 -224.468161  26.835603  16.685593
+    34 -267.989357 -224.468161  26.835603  16.685593
+    35 -267.989357 -224.468161  26.835603  16.685593
+    36 -267.989357 -224.468161  26.835603  16.685593
+    37 -267.989357 -224.468161  26.835603  16.685593
+    38 -267.989357 -224.468161  26.835603  16.685593
+    39 -267.989357 -224.468161  26.835603  16.685593
+    40 -267.989357 -224.468161  26.835603  16.685593
+    41 -267.989357 -224.468161  26.835603  16.685593
+    42 -267.989357 -224.468161  26.835603  16.685593
+    43 -267.989357 -224.468161  26.835603  16.685593
+    44 -267.989357 -224.468161  26.835603  16.685593
+    45 -267.989357 -224.468161  26.835603  16.685593
+    46 -267.989357 -224.468161  26.835603  16.685593
+    47 -267.989357 -224.468161  26.835603  16.685593
+    48 -267.989357 -224.468161  26.835603  16.685593
+    49 -267.989357 -224.468161  26.835603  16.685593
+  #+END_EXAMPLE
+  :END:
+
+  #+BEGIN_SRC ipython :ipyfile coordinate-ascent-opt.png
+    def plot_categorical_slab_fit(s, opt):
+      plt.clf()
+      q = np.logical_or(s.theta != 0, opt['pip'].sum(axis=0) > 0.1)
+      fig, ax = plt.subplots(3, 1, sharex=True, gridspec_kw={'height_ratios': [1, 1, 3]})
+      fig.set_size_inches(6, 8)
+      ax[0].bar(np.arange(np.sum(q)), s.theta[q])
+      ax[0].set_ylabel('True effect size')
+      ax[1].bar(np.arange(np.sum(q)), opt['mean'].sum(axis=0)[q])
+      ax[1].set_ylabel('Estimated effect size')
+      im = ax[2].imshow(opt['pip'][:,q], cmap='Reds', vmin=0, vmax=1)
+      ax[2].set_ylabel('Posterior inclusion probability')
+      ax[2].set_xlabel('True and false positive variants')
+      plt.colorbar(im, ax=ax[2], orientation='horizontal')
+
+    plot_categorical_slab_fit(s, opt)
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
-| Epoch |           ELBO |           llik |         KL(z) |         KL(b) |
-|-------+----------------+----------------+---------------+---------------|
-|     0 | -132745.452102 | -117713.981064 |  25.352915083 | 15006.1181232 |
-|     1 | -132897.186438 | -117869.855683 | 25.1308287107 | 15002.1999267 |
-  Halting
+  [[file:coordinate-ascent-opt.png]]
   :END:
 
 * SGVB on same objective
