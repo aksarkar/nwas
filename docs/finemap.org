@@ -21,7 +21,7 @@
   \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
   \[ p(b_{kj} \mid z_k = 1, v, v_b) = N(b_{kj}; 0, v^{-1} v_b^{-1}) \]
   \[ p(b_{kj} \mid z_k = 0) = \delta(b_{kj}) \]
-  \[ p(z_k, \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
+  \[ p(z_k \mid \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
 
   \[ q(b_{kj} \mid \mu, \phi) = N(b_{kj}; \mu_{kj}, \phi_{kj}^{-1}) \]
   \[ q(z_k \mid \pi) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
@@ -163,7 +163,6 @@
   #+END_EXAMPLE
   :END:
 
-
   #+BEGIN_SRC ipython
     def plot_categorical_slab_fit(s, opt):
       plt.clf()
@@ -193,6 +192,18 @@
   #+RESULTS:
   :RESULTS:
   [[file:coordinate-ascent-opt.png]]
+  :END:
+
+  *TODO:* why is the log likelihood decreasing in the second round of updates?
+
+  #+BEGIN_SRC ipython :ipyfile coordinate-ascent-1-iter.png
+    opt = coordinate_ascent(x, y, l=5, effect_var=1, residual_var=s.residual_var, num_epochs=1)
+    plot_categorical_slab_fit(s, opt)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  [[file:coordinate-ascent-1-iter.png]]
   :END:
 
 * Harder simulation

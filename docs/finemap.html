@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-10-31 Tue 14:44 -->
+<!-- 2017-10-31 Tue 15:01 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fine mapping idea</title>
@@ -277,7 +277,7 @@ approximation.
 \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
 \[ p(b_{kj} \mid z_k = 1, v, v_b) = N(b_{kj}; 0, v^{-1} v_b^{-1}) \]
 \[ p(b_{kj} \mid z_k = 0) = \delta(b_{kj}) \]
-\[ p(z_k, \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
+\[ p(z_k \mid \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
 </p>
 
 <p>
@@ -435,7 +435,6 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 9 -268.019034 -224.800028  26.550398  16.668607
 </pre>
 
-
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">plot_categorical_slab_fit</span>(s, opt):
   plt.clf()
@@ -463,6 +462,22 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 
 <div class="figure">
 <p><img src="coordinate-ascent-opt.png" alt="coordinate-ascent-opt.png">
+</p>
+</div>
+
+<p>
+<b>TODO:</b> why is the log likelihood decreasing in the second round of updates?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, l=5, effect_var=1, residual_var=s.residual_var, num_epochs=1)
+plot_categorical_slab_fit(s, opt)
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="coordinate-ascent-1-iter.png" alt="coordinate-ascent-1-iter.png">
 </p>
 </div>
 </div>
@@ -562,7 +577,7 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-10-31 Tue 14:44</p>
+<p class="date">Created: 2017-10-31 Tue 15:01</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
