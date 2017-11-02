@@ -9,7 +9,7 @@
 #+OPTIONS: html-scripts:t html-style:t html5-fancy:nil tex:t
 #+HTML_DOCTYPE: html5
 #+HTML_CONTAINER: div
-
+#+SETUPFILE: /home/aksarkar/.local/src/org-html-themes/setup/theme-readtheorg.setup
 #+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t :exports both :eval never-export
 
 * Proposed model
@@ -29,42 +29,6 @@
   \[ q(b_{kj} \mid z_{kj} = 0, \mu, \phi) = \delta(b_{kj}) \]
 
   \[ q(z_k \mid \pi) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
-
-* Non-exchangeable prior
-
-  The hard part is deriving \(Cov(w_i, w_j)\).
-
-  Try simulating it:
-
-  #+BEGIN_SRC ipython
-    def sample_ww(logits, mean, prec):
-      z = tf.cast(tf.multinomial(logits, 1), tf.float32)
-      b = mean + tf.random_normal(mean.shape) * tf.sqrt(tf.reciprocal(prec))
-      w = tf.reduce_sum(z * b, axis=0, keep_dims=True)
-      empirical = tf.matmul(w, w, transpose_a=True)
-      return empirical
-
-    def analytical_cov(logits, mean, prec):
-      probs = tf.sigmoid(logits)
-      probs /= tf.reduce_sum(probs, axis=1)
-      return tf.matmul(probs, probs, transpose_a=True) * tf.matmul(mean, mean, transpose_a=True)
-
-    def empirical_cov(l, p, num_samples=1000):
-      logits = tf.random_normal([l, p])
-      mean = tf.random_normal([l, p])
-      prec = tf.nn.softplus(tf.random_normal([l, p]))
-
-      ww = np.zeros((num_samples, p, p))
-      with tf.Session() as sess:
-        for i in range(1000):
-          ww[i] = sess.run(sample_ww(logits, mean, prec))
-
-      return np.mean(ww, axis=0)
-  #+END_SRC
-
-  #+RESULTS:
-  :RESULTS:
-  :END:
 
 * Variational lower bound
 

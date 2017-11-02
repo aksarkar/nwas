@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2017-11-02 Thu 15:29 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytical derivations for non-exchangeable prior</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Abhishek Sarkar">
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Analytical derivations for non-exchangeable prior</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgb69811e">Introduction</a></li>
+<li><a href="#orgcec423e">Case L = 1</a></li>
+<li><a href="#org6ac1aaf">Case L = 2</a></li>
+<li><a href="#orgc6ffbc1">General case</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orgb69811e" class="outline-2">
+<h2 id="orgb69811e">Introduction</h2>
+<div class="outline-text-2" id="text-orgb69811e">
+<p>
+Assume \(\mathbf{y}\) is \(n \times 1\), \(\mathbf{x}\) is \(n \times p\),
+\(m\) is the (maximum) number of causal effects.
+</p>
+
+<p>
+Assume the following model, which has a non-exchangeable prior on sparse
+regression coefficients.
+</p>
+
+<p>
+\[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
+\[ \mathbf{w} = \sum_{k=1}^m z_{kj} b_{kj} \]
+</p>
+
+<p>
+\[ p(b_{kj} \mid z_k = 1, v, v_b) = N(b_{kj}; 0, v^{-1} v_b^{-1}) \]
+\[ p(b_{kj} \mid z_k = 0) = \delta(b_{kj}) \]
+</p>
+
+<p>
+\[ p(z_k \mid \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
+</p>
+
+<p>
+Assume the following variational approximation:
+</p>
+
+<p>
+\[ q(b_{kj} \mid z_{kj} = 1, \mu, \phi) = N(b_{kj}; \mu_{kj}, \phi_{kj}^{-1}) \]
+\[ q(b_{kj} \mid z_{kj} = 0, \mu, \phi) = \delta(b_{kj}) \]
+</p>
+
+<p>
+\[ q(z_k \mid \pi_k) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
+</p>
+
+<p>
+Our goal is to derive an analytical expression for the evidence lower
+bound. It involves the following:
+</p>
+
+<p>
+\[ E_q\left[\sum_{i,j,k} X_{ij} X_{ik} w_j w_k\right] = \sum_{i,j,k} X_{ij}
+  X_{ik} E_q[w_j w_k] \]
+</p>
+
+<p>
+In the case of the spike-and-slab prior, this term goes to zero because
+\(Cov_q(w_j, w_k) = 0\). However, for our choice of prior it does not.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgcec423e" class="outline-2">
+<h2 id="orgcec423e">Case L = 1</h2>
+<div class="outline-text-2" id="text-orgcec423e">
+<p>
+Dropping the first index for clarity and considering two indices \(j, k \in
+  [p]\), if \(j = k\):
+</p>
+
+<p>
+\[ E_q[z_j^2 b_j^2] = \pi_j \left(V_q[b_j \mid z_j = 1] + (E_q[b_j \mid z_j =
+  1])^2 \right) \]
+</p>
+
+<p>
+\[ = \pi_j (\phi_j^{-1} + \mu_j^2) \]
+</p>
+
+<p>
+If \(j \neq k\), we have to condition \(b_j b_k\) on 4 possible values
+\((z_{1j} z_{2j})\). 
+</p>
+
+<p>
+But the term is 0 conditioned on \(z_j = 0, z_k = 0\) because \(q(b_j = 0
+  \mid z_j = 0) = 1\), and is 0 conditioned on \(z_j = 1, z_k = 1\) because in
+that case \(q(z) = 0\).
+</p>
+
+<p>
+\[ E_q[z_j z_k b_j b_k] = \pi_j E_q[b_j b_k \mid z_j = 1] + \pi_k E_q[b_j b_k
+  \mid z_k = 1] \]
+</p>
+
+<p>
+But conditioned on \(z_j = 1\), \(z_k = 0, b_k = 0\) (and analagous
+conditioned on \(z_k = 1\)) so:
+</p>
+
+<p>
+\[ E_q[w_j w_k] = 0 \]
+</p>
+
+<p>
+Simulate to verify this result:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">sample_ww</span>(logits, mean, prec):
+  <span class="org-variable-name">z</span> = tf.multinomial(logits, 1)
+  <span class="org-variable-name">z</span> = tf.reshape(tf.one_hot(z, logits.shape[-1]), tf.shape(mean))
+  <span class="org-variable-name">z</span> = tf.cast(z, tf.float32)
+  <span class="org-variable-name">b</span> = mean + tf.random_normal(mean.shape) * tf.sqrt(tf.reciprocal(prec))
+  <span class="org-variable-name">w</span> = tf.reduce_sum(z * b, axis=0, keep_dims=<span class="org-constant">True</span>)
+  <span class="org-variable-name">ww</span> = tf.matmul(w, w, transpose_a=<span class="org-constant">True</span>)
+  <span class="org-keyword">return</span> ww
+
+<span class="org-keyword">def</span> <span class="org-function-name">empirical_cov</span>(l, p, num_samples=1000):
+  <span class="org-variable-name">logits</span> = tf.get_variable(<span class="org-string">'logits'</span>, initializer=tf.random_normal([l, p]))
+  <span class="org-variable-name">mean</span> = tf.get_variable(<span class="org-string">'mean'</span>, initializer=tf.random_normal([l, p]))
+  <span class="org-variable-name">prec</span> = tf.get_variable(<span class="org-string">'prec'</span>, initializer=tf.nn.softplus(tf.random_normal([l, p])))
+
+  <span class="org-variable-name">ww</span> = np.zeros((num_samples, p, p))
+  <span class="org-keyword">with</span> tf.Session() <span class="org-keyword">as</span> sess:
+    sess.run(tf.global_variables_initializer())
+    <span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">range</span>(num_samples):
+      <span class="org-variable-name">ww</span>[i] = sess.run(sample_ww(logits, mean, prec))
+  <span class="org-keyword">return</span> ww.mean(axis=0)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">with</span> tf.Graph().as_default():
+  <span class="org-variable-name">cov</span> = empirical_cov(l=1, p=5, num_samples=50)
+cov
+</pre>
+</div>
+
+<pre class="example">
+array([[ 0.033442  ,  0.        ,  0.        ,  0.        ,  0.        ],
+         [ 0.        ,  0.16853256,  0.        ,  0.        ,  0.        ],
+         [ 0.        ,  0.        ,  0.25435711,  0.        ,  0.        ],
+         [ 0.        ,  0.        ,  0.        ,  1.12055553,  0.        ],
+         [ 0.        ,  0.        ,  0.        ,  0.        ,  0.03690317]])
+</pre>
+</div>
+</div>
+
+<div id="outline-container-org6ac1aaf" class="outline-2">
+<h2 id="org6ac1aaf">Case L = 2</h2>
+<div class="outline-text-2" id="text-org6ac1aaf">
+<p>
+If \(j = k\):
+</p>
+
+<p>
+\[ E_q[(z_{1j} b_{1j} + z_{2j} b_{2j})^2] = E_q[(z_{1j} b_{1j})^2] + E_q[(z_{2j}
+  b_{2j})^2] + 2 E_q[z_{1j} z_{2j} b_{1j} b_{2j}] \]
+</p>
+
+<p>
+From above, the first two terms are:
+</p>
+
+<p>
+\[ E_q[(z_{1j} b_{1j})^2] = \pi_{1j} (\phi_{1j}^{-1} + \mu_{1j}^2) \]
+</p>
+
+<p>
+\[ E_q[(z_{2j} b_{2j})^2] = \pi_{2j} (\phi_{2j}^{-1} + \mu_{2j}^2) \]
+</p>
+
+<p>
+The final term is an expectation conditioned over 4 possible values \((z_{1j}
+  z_{2j})\). But it is only non-zero if \(z_{1j} = 1, z_{2j} = 1\), so
+</p>
+
+<p>
+\[ 2 E_q[z_{1j} z_{2j} b_{1j} b_{2j}] = 2 \pi_{1j} \pi_{2j} \mu_{1j} \mu_{2j}
+  \]
+</p>
+
+<p>
+If \(j \neq k\):
+</p>
+
+<p>
+\[ E_q[(z_{1j} b_{1j} + z_{2j} b_{2j}) (z_{1k} b_{1k} + z_{2k} b_{2k})] \]
+</p>
+
+<p>
+From above, terms involving \(z_{1j} z_{1k}\) and \(z_{2j} z_{2k}\) vanish.
+</p>
+
+<p>
+\[ = E_q[z_{1j} z_{2k} b_{1j} b_{2k}] + E_q[z_{1k} z_{2j} b_{1k} b_{2j}] \]
+</p>
+
+<p>
+Each term is an expectation conditioned over 4 possible values \((z_{1j},
+  z_{2k})\). But it is non-zero only conditioned on \(z_{1j} = 1, z_{2k} =
+  1\). If \(z_{1j} = 0\), \(b_{1j} = 0\), and similar for \(z_{2k} = 0\).
+</p>
+
+<p>
+\[ E_q[z_{1j} z_{2k} b_{1j} b_{2k}] = \pi_{1j} \pi_{2k} \mu_{1j} \mu_{2k} \]
+</p>
+
+<p>
+\[ E_q[z_{1k} z_{2j} b_{1k} b_{2j}] = \pi_{1k} \pi_{2j} \mu_{1k} \mu_{2j} \]
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgc6ffbc1" class="outline-2">
+<h2 id="orgc6ffbc1">General case</h2>
+<div class="outline-text-2" id="text-orgc6ffbc1">
+<p>
+\[ E_q \left[\left( \sum_r z_{rj} b_{rj} \right) \left( \sum_s z_{sk} z_{sk}
+  \right) \right] \]
+</p>
+
+<p>
+We sum terms over pairs \(r, s\). This can be conceptualized as constructing
+an \(m \times m\) matrix for each pair \(j, k\), where entry \(r, s\)
+contains the corresponding term, and summing its entries. Therefore, we can
+simply reuse the results for case \(L = 2\):
+</p>
+
+<p>
+If \(j = k, r = s\):
+</p>
+
+<p>
+\[ \pi_{rj} (\phi_{rj}^{-1} + \mu_{rj}^2) \]
+</p>
+
+<p>
+If \(j = k, r \neq s\):
+</p>
+
+<p>
+\[ 2 \pi_{rj} \pi_{sj} \mu_{rj} \mu_{sj} \]
+</p>
+
+<p>
+If \(j \neq k, r = s\):
+</p>
+
+<p>
+\[ 0 \]
+</p>
+
+<p>
+If \(j \neq k, r \neq s\):
+</p>
+
+<p>
+\[ \pi_{rj} \pi_{sk} \mu_{rj} \mu_{sk} + \pi_{rk} \pi_{sj} \mu_{rk} \mu_{sj} \]
+</p>
+
+<p>
+To efficiently implement this, notice that the case \(r \neq s\) is the same
+for all pairs \(j, k\). On the diagonal, we recover the factor of two simply
+by summing the terms corresponding to \(r, s\) and \(s, r\).
+</p>
+
+<p>
+On the diagonal we have extra terms \(\pi_{rj} (\phi_{rj}^{-1} +
+  \mu_{rj}^2)\).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">analytical_cov</span>(logits, mean, prec):
+  <span class="org-variable-name">probs</span> = tf.sigmoid(logits)
+  <span class="org-variable-name">probs</span> /= tf.reduce_sum(probs, axis=1, keep_dims=<span class="org-constant">True</span>)
+  <span class="org-variable-name">var</span> = tf.reduce_sum(probs * (tf.square(mean) * tf.reciprocal(prec)), axis=0)
+  <span class="org-variable-name">cov</span> = tf.matrix_set_diag(tf.eye(tf.shape(probs)[1]), var)
+  <span class="org-keyword">if</span> probs.shape[0] == 1:
+    <span class="org-keyword">return</span> cov
+  <span class="org-keyword">else</span>:
+    <span class="org-variable-name">cov</span> += tf.matmul(probs, probs, transpose_a=<span class="org-constant">True</span>)
+    <span class="org-variable-name">cov</span> += tf.matmul(mean, mean, transpose_a=<span class="org-constant">True</span>)
+    <span class="org-keyword">return</span> cov
+
+<span class="org-keyword">def</span> <span class="org-function-name">compare_cov</span>(l, p, num_samples=50):
+  <span class="org-variable-name">logits</span> = tf.get_variable(<span class="org-string">'logits'</span>, initializer=tf.random_normal([l, p]))
+  <span class="org-variable-name">mean</span> = tf.get_variable(<span class="org-string">'mean'</span>, initializer=tf.random_normal([l, p]))
+  <span class="org-variable-name">prec</span> = tf.get_variable(<span class="org-string">'prec'</span>, initializer=tf.nn.softplus(tf.random_normal([l, p])))
+
+  <span class="org-variable-name">ww</span> = np.zeros((num_samples, p, p))
+  <span class="org-keyword">with</span> tf.Session() <span class="org-keyword">as</span> sess:
+    sess.run(tf.global_variables_initializer())
+    <span class="org-variable-name">cov</span> = sess.run(analytical_cov(logits, mean, prec))
+    <span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">range</span>(num_samples):
+      <span class="org-variable-name">ww</span>[i] = sess.run(sample_ww(logits, mean, prec))
+  <span class="org-keyword">return</span> {<span class="org-string">'true'</span>: cov, <span class="org-string">'mean'</span>: ww.mean(axis=0), <span class="org-string">'std'</span>: ww.std(axis=0)}
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">with</span> tf.Graph().as_default():
+  <span class="org-variable-name">result</span> = compare_cov(l=1, p=5, num_samples=500)
+result
+</pre>
+</div>
+
+<pre class="example">
+{'mean': array([[ 0.51065322,  0.        ,  0.        ,  0.        ,  0.        ],
+          [ 0.        ,  0.46582288,  0.        ,  0.        ,  0.        ],
+          [ 0.        ,  0.        ,  0.05170335,  0.        ,  0.        ],
+          [ 0.        ,  0.        ,  0.        ,  0.49491202,  0.        ],
+          [ 0.        ,  0.        ,  0.        ,  0.        ,  1.00800762]]),
+   'std': array([[ 2.28961071,  0.        ,  0.        ,  0.        ,  0.        ],
+          [ 0.        ,  1.94926498,  0.        ,  0.        ,  0.        ],
+          [ 0.        ,  0.        ,  0.35635244,  0.        ,  0.        ],
+          [ 0.        ,  0.        ,  0.        ,  1.93968206,  0.        ],
+          [ 0.        ,  0.        ,  0.        ,  0.        ,  2.17985675]]),
+   'true': array([[ 1.18962514,  0.        ,  0.        ,  0.        ,  0.        ],
+          [ 0.        ,  0.4958204 ,  0.        ,  0.        ,  0.        ],
+          [ 0.        ,  0.        ,  0.08744346,  0.        ,  0.        ],
+          [ 0.        ,  0.        ,  0.        ,  0.15774874,  0.        ],
+          [ 0.        ,  0.        ,  0.        ,  0.        ,  0.33383933]], dtype=float32)}
+</pre>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">with</span> tf.Graph().as_default():
+  <span class="org-variable-name">result</span> = compare_cov(l=2, p=5, num_samples=1000)
+result
+</pre>
+</div>
+
+<pre class="example">
+{'mean': array([[  1.56900097e+00,  -3.64141234e-01,   1.65107749e-02,
+            -4.45378973e-02,  -2.15203249e-01],
+          [ -3.64141234e-01,   1.94331921e+00,  -2.05560835e-02,
+            -8.16864129e-02,  -3.33085588e-02],
+          [  1.65107749e-02,  -2.05560835e-02,   1.89392084e-01,
+            -1.24557875e-06,  -1.59193349e-02],
+          [ -4.45378973e-02,  -8.16864129e-02,  -1.24557875e-06,
+             3.59574653e-01,  -1.07985522e-02],
+          [ -2.15203249e-01,  -3.33085588e-02,  -1.59193349e-02,
+            -1.07985522e-02,   9.24471020e-01]]),
+   'std': array([[ 3.08918563,  1.38056227,  0.36943229,  0.59176396,  0.97111137],
+          [ 1.38056227,  3.28394083,  0.51141142,  0.63430121,  0.64153024],
+          [ 0.36943229,  0.51141142,  0.75163003,  0.12413185,  0.36090543],
+          [ 0.59176396,  0.63430121,  0.12413185,  1.52855069,  0.34238875],
+          [ 0.97111137,  0.64153024,  0.36090543,  0.34238875,  2.80481511]]),
+   'true': array([[ 2.27550507, -0.21468884,  0.46644443,  0.20610106, -2.23284817],
+          [-0.21468884,  4.57976007, -0.15748027,  0.97013932,  2.04361153],
+          [ 0.46644443, -0.15748027,  0.17025512,  0.04313061, -0.54789758],
+          [ 0.20610106,  0.97013932,  0.04313061,  0.39109433,  0.29355159],
+          [-2.23284817,  2.04361153, -0.54789758,  0.29355159,  4.82095623]], dtype=float32)}
+</pre>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Abhishek Sarkar</p>
+<p class="date">Created: 2017-11-02 Thu 15:29</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

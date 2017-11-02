@@ -1,5 +1,6 @@
 #+TITLE: NWAS
 
+- [[file:prior.org][Analytical derivations for non-exchangeable prior]]
 - [[file:finemap.org][Finemapping idea]]
 - [[file:example.org][Linear regression with spike and slab prior]]
 - [[file:pleiotropy.org][Modeling pleiotropic effects]]
