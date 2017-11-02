@@ -19,12 +19,52 @@
 
   \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
   \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
+
   \[ p(b_{kj} \mid z_k = 1, v, v_b) = N(b_{kj}; 0, v^{-1} v_b^{-1}) \]
   \[ p(b_{kj} \mid z_k = 0) = \delta(b_{kj}) \]
+
   \[ p(z_k \mid \mathbf{p}) = \mathrm{Multinomial}(z_k; 1, \mathbf{p}) \]
 
-  \[ q(b_{kj} \mid \mu, \phi) = N(b_{kj}; \mu_{kj}, \phi_{kj}^{-1}) \]
+  \[ q(b_{kj} \mid z_{kj} = 1, \mu, \phi) = N(b_{kj}; \mu_{kj}, \phi_{kj}^{-1}) \]
+  \[ q(b_{kj} \mid z_{kj} = 0, \mu, \phi) = \delta(b_{kj}) \]
+
   \[ q(z_k \mid \pi) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
+
+* Non-exchangeable prior
+
+  The hard part is deriving \(Cov(w_i, w_j)\).
+
+  Try simulating it:
+
+  #+BEGIN_SRC ipython
+    def sample_ww(logits, mean, prec):
+      z = tf.cast(tf.multinomial(logits, 1), tf.float32)
+      b = mean + tf.random_normal(mean.shape) * tf.sqrt(tf.reciprocal(prec))
+      w = tf.reduce_sum(z * b, axis=0, keep_dims=True)
+      empirical = tf.matmul(w, w, transpose_a=True)
+      return empirical
+
+    def analytical_cov(logits, mean, prec):
+      probs = tf.sigmoid(logits)
+      probs /= tf.reduce_sum(probs, axis=1)
+      return tf.matmul(probs, probs, transpose_a=True) * tf.matmul(mean, mean, transpose_a=True)
+
+    def empirical_cov(l, p, num_samples=1000):
+      logits = tf.random_normal([l, p])
+      mean = tf.random_normal([l, p])
+      prec = tf.nn.softplus(tf.random_normal([l, p]))
+
+      ww = np.zeros((num_samples, p, p))
+      with tf.Session() as sess:
+        for i in range(1000):
+          ww[i] = sess.run(sample_ww(logits, mean, prec))
+
+      return np.mean(ww, axis=0)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
 
 * Variational lower bound
 
@@ -38,8 +78,8 @@
   \[ \mathbb{V}_q[w_j] = \sum_k \pi_{kj} \phi_{kj}^{-1} + \pi_{kj} (1 - \pi_{kj}) \mu_{kj}^2 \]
 
   \[ KL(q(\mathbf{z}) \Vert p(\mathbf{z})) = \sum_k E_q[\ln q(z_k) - \ln p(z_k)] \]
-  \[ = \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{k}\right] \]
-  \[ = \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{k} \right) \]
+  \[ = \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{j}\right] \]
+  \[ = \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{j} \right) \]
 
   \[ KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z})) =
   \frac{1}{2} \sum_{j,k} \pi_{kj} \left(1 + \ln (v v_b) - \ln \phi_{kj} + v v_b (\mu_{kj}^2 + \phi_{kj}^{-1}) \right)\]
