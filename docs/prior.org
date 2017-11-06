@@ -29,41 +29,51 @@
   \[ q(z_k \mid \pi_k) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
 
   Our goal is to derive an analytical expression for the evidence lower
-  bound. It involves the following:
+  bound.
 
-  \[ E_q\left[\sum_{i,j,k} X_{ij} X_{ik} w_j w_k\right] = \sum_{i,j,k} X_{ij}
-  X_{ik} E_q[w_j w_k] \]
+  \[ E_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] - KL(q(\mathbf{b} \mid
+  \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z})) - KL(q(\mathbf{z} \Vert p(\mathbf{z})))\]
 
-  In the case of the spike-and-slab prior, this term goes to zero because
-  \(Cov_q(w_j, w_k) = 0\). However, for our choice of prior it does not.
+  Specifically, we seek an analytical expression for the first term:
 
-* Setup                                                            :noexport:
+  \[ E_q \left[-\frac{1}{2}\ln(v) - \frac{v}{2} \left(\sum_i y_i - \sum_j x_{ij} w_j \right)^2 \right]\]
 
-  #+NAME: srun
-  #+BEGIN_SRC shell :dir (concat (file-name-as-directory (getenv "SCRATCH")) "spikeslab")
-  sbatch --partition=gpu2 --time=4:00:00 --job-name=ipython3 --output=ipython3.out
-  #!/bin/bash
-  source activate nwas
-  rm -f $HOME/.local/share/jupyter/runtime/kernel-aksarkar.json
-  ipython3 kernel --ip=$(hostname -i) -f kernel-aksarkar.json
-  #+END_SRC
+* Induction
 
-  #+RESULTS: srun
-  : Submitted batch job 39854037
+  Let \(w_{rj} = z_{rj} b_{rj}\) and let \(w_j^{(k)} = \sum_{r=1}^k z_{rj} b_{rj}\).
 
-  #+NAME: imports
-  #+BEGIN_SRC ipython
-    %matplotlib inline
+  Suppose \(k = 1\). Then:
 
-    import numpy as np
-    import tensorflow as tf
-  #+END_SRC
+  \[ E_q \left[ \sum_i y_i - 2 y_i \sum_j x_{ij} w_{1j} + \left(\sum_j x_{ij}
+  w_{1j}\right)^2 \right] \]
 
-  #+RESULTS: imports
-  :RESULTS:
-  :END:
+  \[ = \sum_i y_i^2 - 2 y_i \sum_j x_{ij} E_q[w_{1j}] + \sum_j x_{ij}^2 E_q[w_{1j}^2] +
+  \sum_{j \neq k} x_{ij} x_{ik} w_{1j} w_{1k} \]
 
-* Case L = 1
+  \[ = \sum_i y_i - 2 y_i \sum_j x_{ij} E_q[w_{1j}] + \sum_j x_{ij}^2
+  \left(E_q[w_{1j}]\right)^2 + \sum_j x_{ij}^2 V_q[w_{1j}] +
+  \sum_{j \neq k} x_{ij} x_{ik} E_q[w_{1j} w_{1k}] \]
+
+  But the last term is zero, because:
+
+  - if \(z_{1j} = 0, w_{1j} = 0\)
+  - if \(z_{1k} = 0, w_{1k} = 0\)
+  - if \(z_{1j} = z_{1k} = 1, q(z) = 0\)
+
+  Therefore,
+
+  \[ E_q[\cdot] = \sum_i \left(y_i - \sum_j x_{ij} E_q[w_{1j}] \right)^2 + \sum_j x_{ij}^2 V_q[w_{1j}] \]
+
+  Now suppose \(k > 1\). Then:
+
+  \[ E_q \left[ \sum_i \left( y_i - \sum_j x_{ij} w_{j}^{(k-1)} - \sum_j x_{ij} w_{kj}\right)^2 \right] \]
+ 
+  \[ = E_q \left[ \sum_i y_i^2 - 2 y_i \sum_j x_{ij} w_{j}^{(k-1)} - 2 y_i \sum_j x_{ij} w_{kj} + \left(\sum_j x_{ij} w_j^{(k-1)}\right)^2 + \left(x_{ij} w_{kj}\right)^2 + 2 \left(\sum_j x_{ij} w_j^{(k-1)}\right) \left(x_{ij} w_{kj}\right)\right] \]
+
+  \[ = \sum_i \left(y_i - \sum_j x_{ij} E_q[w_j^{(k)}]\right)^2 + \sum_j x^2_{ij} V_q[w_j^{(k)}] + 2 \sum_{r, s} x_{ir} x_{is} E_q[w_r^{(k-1)} w_{ks}] \]
+
+* Induction on cross terms
+** Case L = 1
 
   Dropping the first index for clarity and considering two indices \(j, k \in
   [p]\), if \(j = k\):
@@ -119,22 +129,16 @@
 
   #+BEGIN_SRC ipython
     with tf.Graph().as_default():
-      cov = empirical_cov(l=1, p=5, num_samples=50)
+      cov = empirical_cov(l=1, p=2, num_samples=10000)
     cov
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
-  #+BEGIN_EXAMPLE
-  array([[ 0.033442  ,  0.        ,  0.        ,  0.        ,  0.        ],
-           [ 0.        ,  0.16853256,  0.        ,  0.        ,  0.        ],
-           [ 0.        ,  0.        ,  0.25435711,  0.        ,  0.        ],
-           [ 0.        ,  0.        ,  0.        ,  1.12055553,  0.        ],
-           [ 0.        ,  0.        ,  0.        ,  0.        ,  0.03690317]])
-  #+END_EXAMPLE
+  66c3aaf0-aa23-4dbf-b066-7d703725d27c
   :END:
 
-* Case L = 2
+** Case L = 2
   :PROPERTIES:
   :ORDERED:  t
   :END:
@@ -172,7 +176,7 @@
 
   \[ E_q[z_{1k} z_{2j} b_{1k} b_{2j}] = \pi_{1k} \pi_{2j} \mu_{1k} \mu_{2j} \]
 
-* General case
+** General case
 
   \[ E_q \left[\left( \sum_r z_{rj} b_{rj} \right) \left( \sum_s z_{sk} z_{sk}
   \right) \right] \]
