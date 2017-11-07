@@ -44,12 +44,10 @@ def gaussian_spike_slab(x, y, num_epochs=1000, learning_rate=1e-2, stoch_samples
 
       logodds_mean = tf.get_variable('logodds_mean', initializer=tf.constant([-10.]))
       logodds_prec = biased_softplus(tf.get_variable('q_logodds_log_prec', shape=[1]))
-      odds = sigmoid(logodds_mean)
 
       # Effect size inverse variance
       effect_prec_mean = tf.get_variable('effect_prec_mean', shape=[1])
       effect_prec_prec = biased_softplus(tf.get_variable('effect_prec_prec', shape=[1]))
-      effect_prec = biased_softplus(effect_prec_mean)
 
       pip = sigmoid(tf.get_variable('pip', shape=[p, 1]))
       mean = tf.get_variable('effect_mean', shape=[p, 1])
@@ -60,14 +58,16 @@ def gaussian_spike_slab(x, y, num_epochs=1000, learning_rate=1e-2, stoch_samples
 
     eta_mean = tf.matmul(x_ph, effect_posterior_mean)
     eta_std = tf.sqrt(tf.matmul(tf.square(x_ph), effect_posterior_var))
-    noise = tf.random_normal([stoch_samples, 2])
+    noise = tf.random_normal([stoch_samples, 4])
     eta = eta_mean + noise[:,0] * eta_std
     phi = biased_softplus(effect_prec_mean + noise[:,1] * tf.sqrt(tf.reciprocal(effect_prec_prec)))
+    odds = sigmoid(logodds_mean + noise[:,2] * tf.sqrt(tf.reciprocal(logodds_prec)))
+    effect_prec = tf.exp(effect_prec_mean + noise[:,3] * tf.sqrt(tf.reciprocal(effect_prec_prec)))
 
     llik = tf.reduce_mean(tf.reduce_sum(normal_llik(y_ph, eta, phi), axis=0))
     kl_terms = [
-      tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds)),
-      tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec)),
+      tf.reduce_mean(tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds), axis=0)),
+      tf.reduce_mean(tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec), axis=0)),
       tf.reduce_sum(kl_normal_normal(logodds_mean, logodds_prec, tf.constant(0.), tf.constant(1.))),
       tf.reduce_sum(kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))),
     ]
@@ -79,7 +79,10 @@ def gaussian_spike_slab(x, y, num_epochs=1000, learning_rate=1e-2, stoch_samples
     optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
     train = optimizer.minimize(-elbo)
     trace = [elbo, llik, R] + kl_terms
-    opt = [pip, effect_posterior_mean, effect_posterior_var, odds, effect_prec, elbo]
+    opt = [pip, effect_posterior_mean, effect_posterior_var,
+           logodds_mean, tf.reciprocal(biased_softplus(logodds_prec)),
+           effect_prec_mean,
+           tf.reciprocal(biased_softplus(effect_prec_prec)), elbo]
 
     with tf.Session() as sess:
       sess.run(tf.global_variables_initializer())

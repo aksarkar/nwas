@@ -1,0 +1,124 @@
+#+TITLE: Spike-and-slab regression in tensorflow
+#+AUTHOR: Abhishek Sarkar
+#+EMAIL: aksarkar@uchicago.edu
+#+OPTIONS: num:nil
+#+SETUPFILE: /home/aksarkar/.local/src/org-html-themes/setup/theme-readtheorg.setup
+#+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :eval never-export :exports both
+
+* Setup
+
+  #+BEGIN_SRC shell
+    mkdir -p $SCRATCH/nwas
+  #+END_SRC
+
+  #+RESULTS:
+
+  #+BEGIN_SRC shell :dir (concat (file-name-as-directory (getenv "SCRATCH")) "nwas")
+  sbatch --partition=gpu2 --mem=4G --time=1:00:00 --job-name=ipython3 --output=ipython3.out
+  #!/bin/bash
+  source activate nwas
+  rm -f $HOME/.local/share/jupyter/runtime/kernel-aksarkar.json
+  ipython3 kernel --ip=$(hostname -i) -f kernel-aksarkar.json
+  #+END_SRC
+
+  #+RESULTS:
+  : Submitted batch job 40004142
+
+  #+BEGIN_SRC ipython
+    %matplotlib inline
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import nwas
+    import tensorflow as tf
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Simulate some data
+
+  #+BEGIN_SRC ipython
+    p = 1000
+    n_train = 500
+    n_validate = 500
+    pve_y = 0.5
+
+    with nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) as s:
+      x_train, y_train = s.sample_gaussian(n=n_train)
+      x_validate, y_validate = s.sample_gaussian(n=n_validate)
+      x_train = x_train.astype('float32')
+      x_validate = x_validate.astype('float32')
+      y_train = y_train.reshape(-1, 1).astype('float32')
+      y_validate = y_validate.reshape(-1, 1).astype('float32')
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Fit the model
+
+  #+BEGIN_SRC ipython :results output verbatim
+    opt = nwas.sgvb.gaussian_spike_slab(x_train, y_train, verbose=True, num_epochs=2000)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+|    0 | -50276.6 | -45306.1 |      0.0 | 4244.26 | 674.097 | 51.0381 | 1.03809 |
+|  100 | -22879.1 | -20386.2 | 0.638839 | 2026.68 | 423.719 | 41.0992 | 1.40355 |
+|  200 | -5532.49 | -4237.59 | 0.658222 | 926.874 | 332.561 | 33.0398 | 2.43145 |
+|  300 |  -1946.7 |  -1373.6 | 0.594758 | 346.712 | 196.336 | 25.9544 | 4.09383 |
+|  400 |  -1522.3 | -1258.54 | 0.504074 | 117.999 | 119.789 | 19.7402 | 6.22503 |
+|  500 | -1317.52 | -1164.11 | 0.434732 | 60.1215 | 71.7515 | 14.4794 | 7.06086 |
+|  600 | -1244.91 | -1137.09 | 0.395889 | 41.7949 | 47.8878 | 10.7116 | 7.42407 |
+|  700 | -1214.53 | -1112.81 | 0.392515 | 46.2967 | 37.8422 | 10.1279 |  7.4531 |
+|  800 | -1227.52 | -1125.05 |   0.3878 | 49.0172 | 35.6815 | 10.4213 | 7.35653 |
+|  900 | -1201.09 | -1100.08 | 0.383958 |  49.222 | 33.9632 |   10.47 | 7.36142 |
+| 1000 | -1205.57 | -1104.18 | 0.385103 | 49.3583 | 34.1467 | 10.5507 | 7.33199 |
+| 1100 |  -1204.0 | -1101.81 | 0.384149 | 50.0987 |  34.247 | 10.5458 | 7.29553 |
+| 1200 | -1221.45 | -1116.99 | 0.387258 | 50.2331 | 36.2046 | 10.5254 | 7.48952 |
+| 1300 | -1199.18 | -1094.58 | 0.389311 | 51.4891 | 35.4226 | 10.3546 | 7.34145 |
+| 1400 | -1207.06 | -1100.71 | 0.390911 | 52.0812 | 36.2315 | 10.5319 | 7.50345 |
+| 1500 | -1220.37 | -1114.54 | 0.387939 | 52.0081 | 35.9887 | 10.4323 | 7.40387 |
+| 1600 | -1216.39 | -1110.51 |  0.38914 | 51.7507 | 36.3432 | 10.4283 |  7.3602 |
+| 1700 |  -1199.5 | -1092.05 | 0.389806 | 52.3625 | 37.2076 | 10.4828 | 7.39358 |
+| 1800 |  -1211.6 |  -1103.3 | 0.389046 | 53.3261 | 37.0924 | 10.4934 | 7.39297 |
+| 1900 | -1197.18 | -1089.74 | 0.387818 | 53.2087 | 36.4421 | 10.3925 | 7.39289 |
+  :END:
+
+  #+BEGIN_SRC ipython
+    opt[-5:]
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+  [array([-4.15133905], dtype=float32),
+     array([ 0.09275417], dtype=float32),
+     array([-3.37005305], dtype=float32),
+     array([ 0.0616137], dtype=float32),
+     -1205.1755]
+  #+END_EXAMPLE
+  :END:
+
+  #+BEGIN_SRC ipython :ipyfile fit.png
+    plt.clf()
+    q = np.logical_or(s.theta != 0, opt[0].ravel() > 0.1)
+    fig, ax = plt.subplots(3, 1)
+    fig.set_size_inches(6, 8)
+    ax[0].bar(np.arange(np.sum(q)), s.theta[q])
+    ax[0].set_ylabel('True effect size')
+    ax[1].bar(np.arange(np.sum(q)), opt[1].ravel()[q])
+    ax[1].set_ylabel('Estimated effect size')
+    ax[2].bar(np.arange(np.sum(q)), opt[0].ravel()[q])
+    ax[2].set_ylabel('Posterior inclusion probability')
+    ax[2].set_xlabel('True and false positive variants')
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  : <matplotlib.text.Text at 0x7f89aa19d208>
+  [[file:fit.png]]
+  :END:
