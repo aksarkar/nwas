@@ -1,10 +1,10 @@
 #+TITLE: NWAS
 
 - [[file:prior.org][Analytical derivations for non-exchangeable prior]]
-- [[file:finemap.org][Finemapping idea]]
+- [[file:finemap.org][Fine mapping idea]]
 - [[file:example.org][Linear regression with spike and slab prior]]
 - [[file:pleiotropy.org][Modeling pleiotropic effects]]
 - [[file:unmediated.org][Modeling uncorrelated, unmediated effects]]
 - [[file:model.org][Proposed model]]
-- [[file:bayesflow.org][Spike-and-slab regression in Bayesflow]]
+- [[file:tensorflow.org][Spike-and-slab regression in tensorflow]]
 - [[file:twostage.org][Two-stage regression]]

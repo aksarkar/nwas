@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-10-04 Wed 19:26 -->
+<!-- 2017-11-06 Mon 20:28 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Linear regression with spike and slab prior</title>
@@ -231,16 +231,16 @@ for the JavaScript code in this tag.
 <div id="content">
 <h1 class="title">Linear regression with spike and slab prior</h1>
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #00cd00;">import</span> edward <span style="color: #00cd00;">as</span> ed
-<span style="color: #00cd00;">import</span> matplotlib.pyplot <span style="color: #00cd00;">as</span> plt
-<span style="color: #00cd00;">import</span> numpy
-<span style="color: #00cd00;">import</span> nwas
-<span style="color: #00cd00;">import</span> scipy.special
-<span style="color: #00cd00;">import</span> tensorflow <span style="color: #00cd00;">as</span> tf
+<pre class="src src-python"><span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
+<span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
+<span class="org-keyword">import</span> numpy
+<span class="org-keyword">import</span> nwas
+<span class="org-keyword">import</span> scipy.special
+<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
 
-<span style="color: #00cd00;">from</span> edward.models <span style="color: #00cd00;">import</span> *
-<span style="color: #00cd00;">from</span> nwas.models <span style="color: #00cd00;">import</span> *
-</code></pre>
+<span class="org-keyword">from</span> edward.models <span class="org-keyword">import</span> *
+<span class="org-keyword">from</span> nwas.models <span class="org-keyword">import</span> *
+</pre>
 </div>
 
 <p>
@@ -248,20 +248,20 @@ Simulate some data:
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">p</span> = 10000
-<span style="color: #0000ee;">n_train</span> = 7500
-<span style="color: #0000ee;">n_validate</span> = 1000
-<span style="color: #0000ee;">pve_y</span> = 0.5
+<pre class="src src-python"><span class="org-variable-name">p</span> = 10000
+<span class="org-variable-name">n_train</span> = 7500
+<span class="org-variable-name">n_validate</span> = 1000
+<span class="org-variable-name">pve_y</span> = 0.5
 
-<span style="color: #00cd00;">with</span> nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) <span style="color: #00cd00;">as</span> s:
-    <span style="color: #0000ee;">true_w</span> = s.theta.reshape(-1, 1)
-    <span style="color: #0000ee;">x_train</span>, <span style="color: #0000ee;">y_train</span> = s.sample_gaussian(n=n_train)
-    <span style="color: #0000ee;">x_validate</span>, <span style="color: #0000ee;">y_validate</span> = s.sample_gaussian(n=n_validate)
-    <span style="color: #0000ee;">x_train</span> = x_train.astype(<span style="color: #00cdcd;">'float32'</span>)
-    <span style="color: #0000ee;">y_train</span> = y_train.reshape(-1, 1).astype(<span style="color: #00cdcd;">'float32'</span>)
-    <span style="color: #0000ee;">x_validate</span> = x_validate.astype(<span style="color: #00cdcd;">'float32'</span>)
-    <span style="color: #0000ee;">y_validate</span> = y_validate.reshape(-1, 1).astype(<span style="color: #00cdcd;">'float32'</span>)
-</code></pre>
+<span class="org-keyword">with</span> nwas.simulation.simulation(p, pve_y, [(100, 1)], 0) <span class="org-keyword">as</span> s:
+    <span class="org-variable-name">true_w</span> = s.theta.reshape(-1, 1)
+    <span class="org-variable-name">x_train</span>, <span class="org-variable-name">y_train</span> = s.sample_gaussian(n=n_train)
+    <span class="org-variable-name">x_validate</span>, <span class="org-variable-name">y_validate</span> = s.sample_gaussian(n=n_validate)
+    <span class="org-variable-name">x_train</span> = x_train.astype(<span class="org-string">'float32'</span>)
+    <span class="org-variable-name">y_train</span> = y_train.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
+    <span class="org-variable-name">x_validate</span> = x_validate.astype(<span class="org-string">'float32'</span>)
+    <span class="org-variable-name">y_validate</span> = y_validate.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
+</pre>
 </div>
 
 <p>
@@ -269,18 +269,18 @@ Set up the model:
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">x</span> = tf.placeholder(tf.float32)
-<span style="color: #0000ee;">logodds</span> = Normal(loc=-numpy.log(p).astype(<span style="color: #00cdcd;">'float32'</span>), scale=tf.ones(1))
-<span style="color: #0000ee;">scale</span> = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
-<span style="color: #0000ee;">w</span> = SpikeSlab(logodds=logodds,
+<pre class="src src-python"><span class="org-variable-name">x</span> = tf.placeholder(tf.float32)
+<span class="org-variable-name">logodds</span> = Normal(loc=-numpy.log(p).astype(<span class="org-string">'float32'</span>), scale=tf.ones(1))
+<span class="org-variable-name">scale</span> = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
+<span class="org-variable-name">w</span> = SpikeSlab(logodds=logodds,
               loc=tf.zeros([p, 1]),
               scale=scale,
 )
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">This is a dummy which gets swapped out in inference. It only needs to have</span>
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">the correct shape</span>
-<span style="color: #0000ee;">eta</span> = LocalReparameterization(ed.models.Normal(tf.matmul(x, w), 1.0))
-<span style="color: #0000ee;">y</span> = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
-</code></pre>
+<span class="org-comment-delimiter"># </span><span class="org-comment">This is a dummy which gets swapped out in inference. It only needs to have</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">the correct shape</span>
+<span class="org-variable-name">eta</span> = LocalReparameterization(ed.models.Normal(tf.matmul(x, w), 1.0))
+<span class="org-variable-name">y</span> = NormalWithSoftplusScale(loc=eta, scale=tf.Variable(tf.zeros([1])))
+</pre>
 </div>
 
 <p>
@@ -288,18 +288,18 @@ Set up the variational approximation:
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">q_logodds</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<pre class="src src-python"><span class="org-variable-name">q_logodds</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                    scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_scale</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<span class="org-variable-name">q_scale</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                  scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_w</span> = SpikeSlab(
+<span class="org-variable-name">q_w</span> = SpikeSlab(
     logodds=tf.Variable(tf.zeros([p, 1])),
     loc=tf.Variable(tf.zeros([p, 1])),
     scale=tf.Variable(tf.zeros([p, 1])))
-<span style="color: #0000ee;">q_eta</span> = LocalReparameterization(
+<span class="org-variable-name">q_eta</span> = LocalReparameterization(
     ed.models.Normal(loc=tf.matmul(x, q_w.mean()),
     scale=tf.sqrt(tf.matmul(tf.square(x), q_w.variance()))))
-</code></pre>
+</pre>
 </div>
 
 <p>
@@ -307,7 +307,7 @@ Fit the approximation:
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">inference</span> = ed.ReparameterizationKLKLqp(
+<pre class="src src-python"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
     latent_vars={
         logodds: q_logodds,
         scale: q_scale,
@@ -319,8 +319,8 @@ Fit the approximation:
         y: y_train,
     })
 
-inference.run(n_iter=1000, optimizer=<span style="color: #00cdcd;">'rmsprop'</span>)
-</code></pre>
+inference.run(n_iter=1000, optimizer=<span class="org-string">'rmsprop'</span>)
+</pre>
 </div>
 
 <p>
@@ -328,25 +328,25 @@ Plot the fit:
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">session</span> = ed.get_session()
-<span style="color: #0000ee;">pip</span> = session.run(q_w.pip)
-<span style="color: #0000ee;">est_w</span> = session.run(q_w.mean())
+<pre class="src src-python"><span class="org-variable-name">session</span> = ed.get_session()
+<span class="org-variable-name">pip</span> = session.run(q_w.pip)
+<span class="org-variable-name">est_w</span> = session.run(q_w.mean())
 
-plt.switch_backend(<span style="color: #00cdcd;">'pdf'</span>)
-<span style="color: #0000ee;">q</span> = numpy.logical_or(pip &gt; 0.1, true_w != 0)
-<span style="color: #0000ee;">nq</span> = numpy.count_nonzero(q)
-<span style="color: #0000ee;">fig</span>, <span style="color: #0000ee;">ax</span> = plt.subplots(3, 1)
+plt.switch_backend(<span class="org-string">'pdf'</span>)
+<span class="org-variable-name">q</span> = numpy.logical_or(pip &gt; 0.1, true_w != 0)
+<span class="org-variable-name">nq</span> = numpy.count_nonzero(q)
+<span class="org-variable-name">fig</span>, <span class="org-variable-name">ax</span> = plt.subplots(3, 1)
 fig.set_size_inches(6, 8)
-plt.xlabel(<span style="color: #00cdcd;">'True and false positive variants'</span>)
-ax[0].bar(<span style="color: #00cd00;">range</span>(nq), true_w[q])
-ax[0].set_ylabel(<span style="color: #00cdcd;">'True effect size'</span>)
-ax[1].bar(<span style="color: #00cd00;">range</span>(nq), est_w[q])
-ax[1].set_ylabel(<span style="color: #00cdcd;">'Estimated effect size'</span>)
-ax[2].bar(<span style="color: #00cd00;">range</span>(nq), pip[q])
-ax[2].set_ylabel(<span style="color: #00cdcd;">'PIP'</span>)
-plt.savefig(<span style="color: #00cdcd;">'example'</span>)
+plt.xlabel(<span class="org-string">'True and false positive variants'</span>)
+ax[0].bar(<span class="org-builtin">range</span>(nq), true_w[q])
+ax[0].set_ylabel(<span class="org-string">'True effect size'</span>)
+ax[1].bar(<span class="org-builtin">range</span>(nq), est_w[q])
+ax[1].set_ylabel(<span class="org-string">'Estimated effect size'</span>)
+ax[2].bar(<span class="org-builtin">range</span>(nq), pip[q])
+ax[2].set_ylabel(<span class="org-string">'PIP'</span>)
+plt.savefig(<span class="org-string">'example'</span>)
 plt.close()
-</code></pre>
+</pre>
 </div>
 
 <p>
@@ -356,21 +356,21 @@ different shapes.
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #00cd00;">def</span> <span style="color: #0000ee;">correlation_score</span>(y_true, y_pred):
-    <span style="color: #0000ee;">R</span> = 1 - (tf.reduce_sum(tf.square(y_true - y_pred)) /
+<pre class="src src-python"><span class="org-keyword">def</span> <span class="org-function-name">correlation_score</span>(y_true, y_pred):
+    <span class="org-variable-name">R</span> = 1 - (tf.reduce_sum(tf.square(y_true - y_pred)) /
              tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true))))
-    <span style="color: #00cd00;">return</span> ed.get_session().run(R)
+    <span class="org-keyword">return</span> ed.get_session().run(R)
 
-<span style="color: #00cd00;">print</span>(<span style="color: #00cdcd;">'Training set score = {:.3f}'</span>.<span style="color: #00cd00;">format</span>(
+<span class="org-keyword">print</span>(<span class="org-string">'Training set score = {:.3f}'</span>.<span class="org-builtin">format</span>(
     correlation_score(y_train, session.run(q_eta.mean(), {x: x_train}))))
-<span style="color: #00cd00;">print</span>(<span style="color: #00cdcd;">'Validation set score = {:.3f}'</span>.<span style="color: #00cd00;">format</span>(
+<span class="org-keyword">print</span>(<span class="org-string">'Validation set score = {:.3f}'</span>.<span class="org-builtin">format</span>(
     correlation_score(y_validate, session.run(q_eta.mean(), {x: x_validate}))))
-</code></pre>
+</pre>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-10-04 Wed 19:26</p>
+<p class="date">Created: 2017-11-06 Mon 20:28</p>
 <p class="creator">Emacs 25.1.1 (Org mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

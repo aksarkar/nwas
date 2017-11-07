@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-06 Mon 13:21 -->
+<!-- 2017-11-06 Mon 20:28 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Analytical derivations for non-exchangeable prior</title>
@@ -260,22 +260,22 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgb69811e">Introduction</a></li>
-<li><a href="#org6ed2273">Induction</a></li>
-<li><a href="#org814dfaf">Induction on cross terms</a>
+<li><a href="#orgb67d192">Introduction</a></li>
+<li><a href="#org8f01666">Induction</a></li>
+<li><a href="#org59490cb">Induction on cross terms</a>
 <ul>
-<li><a href="#orgcec423e">Case L = 1</a></li>
-<li><a href="#org6ac1aaf">Case L = 2</a></li>
-<li><a href="#org9b52d5c">General case</a></li>
+<li><a href="#org69eda2c">Case L = 1</a></li>
+<li><a href="#orga5adfcb">Case L = 2</a></li>
+<li><a href="#org4449a5c">General case</a></li>
 </ul>
 </li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-orgb69811e" class="outline-2">
-<h2 id="orgb69811e">Introduction</h2>
-<div class="outline-text-2" id="text-orgb69811e">
+<div id="outline-container-orgb67d192" class="outline-2">
+<h2 id="orgb67d192">Introduction</h2>
+<div class="outline-text-2" id="text-orgb67d192">
 <p>
 Assume \(\mathbf{y}\) is \(n \times 1\), \(\mathbf{x}\) is \(n \times p\),
 \(m\) is the (maximum) number of causal effects.
@@ -333,9 +333,9 @@ Specifically, we seek an analytical expression for the first term:
 </div>
 </div>
 
-<div id="outline-container-org6ed2273" class="outline-2">
-<h2 id="org6ed2273">Induction</h2>
-<div class="outline-text-2" id="text-org6ed2273">
+<div id="outline-container-org8f01666" class="outline-2">
+<h2 id="org8f01666">Induction</h2>
+<div class="outline-text-2" id="text-org8f01666">
 <p>
 Let \(w_{rj} = z_{rj} b_{rj}\) and let \(w_j^{(k)} = \sum_{r=1}^k z_{rj} b_{rj}\).
 </p>
@@ -396,13 +396,13 @@ Now suppose \(k > 1\). Then:
 </div>
 </div>
 
-<div id="outline-container-org814dfaf" class="outline-2">
-<h2 id="org814dfaf">Induction on cross terms</h2>
-<div class="outline-text-2" id="text-org814dfaf">
+<div id="outline-container-org59490cb" class="outline-2">
+<h2 id="org59490cb">Induction on cross terms</h2>
+<div class="outline-text-2" id="text-org59490cb">
 </div>
-<div id="outline-container-orgcec423e" class="outline-3">
-<h3 id="orgcec423e">Case L = 1</h3>
-<div class="outline-text-3" id="text-orgcec423e">
+<div id="outline-container-org69eda2c" class="outline-3">
+<h3 id="org69eda2c">Case L = 1</h3>
+<div class="outline-text-3" id="text-org69eda2c">
 <p>
 Dropping the first index for clarity and considering two indices \(j, k \in
   [p]\), if \(j = k\):
@@ -483,9 +483,9 @@ cov
 </div>
 </div>
 
-<div id="outline-container-org6ac1aaf" class="outline-3">
-<h3 id="org6ac1aaf">Case L = 2</h3>
-<div class="outline-text-3" id="text-org6ac1aaf">
+<div id="outline-container-orga5adfcb" class="outline-3">
+<h3 id="orga5adfcb">Case L = 2</h3>
+<div class="outline-text-3" id="text-orga5adfcb">
 <p>
 If \(j = k\):
 </p>
@@ -549,9 +549,9 @@ Each term is an expectation conditioned over 4 possible values \((z_{1j},
 </div>
 </div>
 
-<div id="outline-container-org9b52d5c" class="outline-3">
-<h3 id="org9b52d5c">General case</h3>
-<div class="outline-text-3" id="text-org9b52d5c">
+<div id="outline-container-org4449a5c" class="outline-3">
+<h3 id="org4449a5c">General case</h3>
+<div class="outline-text-3" id="text-org4449a5c">
 <p>
 \[ E_q \left[\left( \sum_r z_{rj} b_{rj} \right) \left( \sum_s z_{sk} z_{sk}
   \right) \right] \]
@@ -695,7 +695,7 @@ result
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-06 Mon 13:21</p>
+<p class="date">Created: 2017-11-06 Mon 20:28</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

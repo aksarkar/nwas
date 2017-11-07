@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-10-04 Wed 19:26 -->
+<!-- 2017-11-06 Mon 20:28 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Proposed model</title>
@@ -256,19 +256,19 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org463db31">1. Simulation setup</a></li>
-<li><a href="#orge09c63d">2. Ordinary TWAS</a></li>
-<li><a href="#orgaad8996">3. Joint model</a></li>
-<li><a href="#org9498e4a">4. Variational approximation</a></li>
-<li><a href="#org7429869">5. Model fitting</a></li>
-<li><a href="#org508b2fe">6. Model evaluation</a></li>
-<li><a href="#org762b12f">7. Limitations</a></li>
+<li><a href="#org933b906">1. Simulation setup</a></li>
+<li><a href="#org43e3e01">2. Ordinary TWAS</a></li>
+<li><a href="#org1f182d9">3. Joint model</a></li>
+<li><a href="#orgc11aeaf">4. Variational approximation</a></li>
+<li><a href="#org6aaf465">5. Model fitting</a></li>
+<li><a href="#org3931ec2">6. Model evaluation</a></li>
+<li><a href="#org8fdf8a5">7. Limitations</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org463db31" class="outline-2">
-<h2 id="org463db31"><span class="section-number-2">1</span> Simulation setup</h2>
+<div id="outline-container-org933b906" class="outline-2">
+<h2 id="org933b906"><span class="section-number-2">1</span> Simulation setup</h2>
 <div class="outline-text-2" id="text-1">
 <ul class="org-ul">
 <li>Generate random genotypes in linkage equilibrium</li>
@@ -311,74 +311,74 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 </div>
 
-<div id="outline-container-orge09c63d" class="outline-2">
-<h2 id="orge09c63d"><span class="section-number-2">2</span> Ordinary TWAS</h2>
+<div id="outline-container-org43e3e01" class="outline-2">
+<h2 id="org43e3e01"><span class="section-number-2">2</span> Ordinary TWAS</h2>
 </div>
 
-<div id="outline-container-orgaad8996" class="outline-2">
-<h2 id="orgaad8996"><span class="section-number-2">3</span> Joint model</h2>
+<div id="outline-container-org1f182d9" class="outline-2">
+<h2 id="org1f182d9"><span class="section-number-2">3</span> Joint model</h2>
 <div class="outline-text-2" id="text-3">
 <div class="org-src-container">
-<pre><code class="src src-python">ed.set_seed(0)
+<pre class="src src-python">ed.set_seed(0)
 
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">Data</span>
-<span style="color: #0000ee;">x0</span> = tf.placeholder(tf.float32)
-<span style="color: #0000ee;">x1</span> = tf.placeholder(tf.float32)
+<span class="org-comment-delimiter"># </span><span class="org-comment">Data</span>
+<span class="org-variable-name">x0</span> = tf.placeholder(tf.float32)
+<span class="org-variable-name">x1</span> = tf.placeholder(tf.float32)
 
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">eQTL effects</span>
-<span style="color: #0000ee;">logodds_w</span> = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
-<span style="color: #0000ee;">scale_w</span> = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-<span style="color: #0000ee;">w</span> = SpikeSlab(logodds=logodds_w, loc=tf.zeros([p, m]), scale=scale_w)
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">This is a dummy which gets swapped out in the inference</span>
-<span style="color: #0000ee;">eta0</span> = LocalReparameterization(Normal(tf.matmul(x0, w), 1.0))
-<span style="color: #0000ee;">g0</span> = NormalWithSoftplusScale(
+<span class="org-comment-delimiter"># </span><span class="org-comment">eQTL effects</span>
+<span class="org-variable-name">logodds_w</span> = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+<span class="org-variable-name">scale_w</span> = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+<span class="org-variable-name">w</span> = SpikeSlab(logodds=logodds_w, loc=tf.zeros([p, m]), scale=scale_w)
+<span class="org-comment-delimiter"># </span><span class="org-comment">This is a dummy which gets swapped out in the inference</span>
+<span class="org-variable-name">eta0</span> = LocalReparameterization(Normal(tf.matmul(x0, w), 1.0))
+<span class="org-variable-name">g0</span> = NormalWithSoftplusScale(
     loc=eta0, scale=tf.Variable(tf.random_normal([1])))
 
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">Mediated gene effects</span>
-<span style="color: #0000ee;">logodds_v</span> = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
-<span style="color: #0000ee;">scale_v</span> = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-<span style="color: #0000ee;">v</span> = SpikeSlab(logodds=logodds_v, loc=tf.zeros([m, 1]), scale=scale_v)
-<span style="color: #0000ee;">eta1m</span> = LocalReparameterization(Normal(tf.matmul(tf.matmul(x1, w), v), 1.0))
+<span class="org-comment-delimiter"># </span><span class="org-comment">Mediated gene effects</span>
+<span class="org-variable-name">logodds_v</span> = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+<span class="org-variable-name">scale_v</span> = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+<span class="org-variable-name">v</span> = SpikeSlab(logodds=logodds_v, loc=tf.zeros([m, 1]), scale=scale_v)
+<span class="org-variable-name">eta1m</span> = LocalReparameterization(Normal(tf.matmul(tf.matmul(x1, w), v), 1.0))
 
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">Unmediated effects</span>
-<span style="color: #0000ee;">logodds_u</span> = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
-<span style="color: #0000ee;">scale_u</span> = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-<span style="color: #0000ee;">u</span> = SpikeSlab(logodds=logodds_u, loc=tf.zeros([p, 1]), scale=scale_u)
-<span style="color: #0000ee;">eta1u</span> = LocalReparameterization(Normal(tf.matmul(x1, u), 1.0))
+<span class="org-comment-delimiter"># </span><span class="org-comment">Unmediated effects</span>
+<span class="org-variable-name">logodds_u</span> = Normal(loc=tf.constant(-10.0), scale=tf.ones(1))
+<span class="org-variable-name">scale_u</span> = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+<span class="org-variable-name">u</span> = SpikeSlab(logodds=logodds_u, loc=tf.zeros([p, 1]), scale=scale_u)
+<span class="org-variable-name">eta1u</span> = LocalReparameterization(Normal(tf.matmul(x1, u), 1.0))
 
-<span style="color: #0000ee;">y1</span> = NormalWithSoftplusScale(loc=eta1m + eta1u, scale=tf.Variable(0.0))
-</code></pre>
+<span class="org-variable-name">y1</span> = NormalWithSoftplusScale(loc=eta1m + eta1u, scale=tf.Variable(0.0))
+</pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org9498e4a" class="outline-2">
-<h2 id="org9498e4a"><span class="section-number-2">4</span> Variational approximation</h2>
+<div id="outline-container-orgc11aeaf" class="outline-2">
+<h2 id="orgc11aeaf"><span class="section-number-2">4</span> Variational approximation</h2>
 <div class="outline-text-2" id="text-4">
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<pre class="src src-python"><span class="org-variable-name">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_logodds_v</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<span class="org-variable-name">q_logodds_v</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_logodds_u</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<span class="org-variable-name">q_logodds_u</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_scale_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<span class="org-variable-name">q_scale_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                    scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_scale_v</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<span class="org-variable-name">q_scale_v</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                    scale=tf.Variable(tf.random_normal([1])))
-<span style="color: #0000ee;">q_scale_u</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<span class="org-variable-name">q_scale_u</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                    scale=tf.Variable(tf.random_normal([1])))
 
-<span style="color: #00cd00;">import</span> scipy.linalg
-initial_w, *<span style="color: #0000ee;">_</span> = scipy.linalg.lstsq(x_ref, g_ref)
+<span class="org-keyword">import</span> scipy.linalg
+initial_w, *<span class="org-variable-name">_</span> = scipy.linalg.lstsq(x_ref, g_ref)
 
-<span style="color: #0000ee;">q_w</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([p, m])),
-                loc=tf.Variable(initial_w.astype(<span style="color: #00cdcd;">'float32'</span>)),
+<span class="org-variable-name">q_w</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([p, m])),
+                loc=tf.Variable(initial_w.astype(<span class="org-string">'float32'</span>)),
                 scale=tf.Variable(tf.zeros([p, m])))
-<span style="color: #0000ee;">q_eta0</span> = LocalReparameterization(
+<span class="org-variable-name">q_eta0</span> = LocalReparameterization(
     Normal(loc=tf.matmul(x0, q_w.mean()),
            scale=tf.sqrt(tf.matmul(tf.square(x0), q_w.variance()))))
-</code></pre>
+</pre>
 </div>
 
 <p>
@@ -411,37 +411,37 @@ simply apply the above result to get:
 </p>
 
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">q_v</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
+<pre class="src src-python"><span class="org-variable-name">q_v</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
                 loc=tf.Variable(tf.random_normal([m, 1])),
                 scale=tf.Variable(tf.zeros([m, 1])))
-<span style="color: #00ffff; font-style: italic;"># </span><span style="color: #00ffff; font-style: italic;">Conviently keep the necessary mean and variance around</span>
-<span style="color: #0000ee;">q_eta1</span> = Normal(loc=tf.matmul(x1, q_w.mean()),
+<span class="org-comment-delimiter"># </span><span class="org-comment">Conviently keep the necessary mean and variance around</span>
+<span class="org-variable-name">q_eta1</span> = Normal(loc=tf.matmul(x1, q_w.mean()),
                 scale=tf.sqrt(tf.matmul(tf.square(x1), q_w.variance())))
-<span style="color: #0000ee;">var</span> = (tf.reduce_sum(tf.square(q_eta1.mean()) *
-                     tf.transpose(q_v.variance()), axis=1, keep_dims=<span style="color: #00cdcd;">True</span>) +
+<span class="org-variable-name">var</span> = (tf.reduce_sum(tf.square(q_eta1.mean()) *
+                     tf.transpose(q_v.variance()), axis=1, keep_dims=<span class="org-constant">True</span>) +
        tf.reduce_sum(tf.transpose(tf.square(q_v.mean())) *
-                     q_eta1.variance(), axis=1, keep_dims=<span style="color: #00cdcd;">True</span>) +
+                     q_eta1.variance(), axis=1, keep_dims=<span class="org-constant">True</span>) +
        tf.matmul(q_eta1.variance(), q_v.variance()))
-<span style="color: #0000ee;">q_eta1m</span> = LocalReparameterization(
+<span class="org-variable-name">q_eta1m</span> = LocalReparameterization(
     Normal(loc=tf.matmul(tf.matmul(x1, q_w.mean()), q_v.mean()),
            scale=tf.sqrt(var)))
 
-<span style="color: #0000ee;">q_u</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
+<span class="org-variable-name">q_u</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([p, 1])),
                 loc=tf.Variable(tf.zeros([p, 1])),
                 scale=tf.Variable(tf.zeros([p, 1])))
-<span style="color: #0000ee;">q_eta1u</span> = LocalReparameterization(
+<span class="org-variable-name">q_eta1u</span> = LocalReparameterization(
     Normal(loc=tf.matmul(x1, q_u),
            scale=tf.sqrt(tf.matmul(tf.square(x1), q_u.variance()))))
-</code></pre>
+</pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org7429869" class="outline-2">
-<h2 id="org7429869"><span class="section-number-2">5</span> Model fitting</h2>
+<div id="outline-container-org6aaf465" class="outline-2">
+<h2 id="org6aaf465"><span class="section-number-2">5</span> Model fitting</h2>
 <div class="outline-text-2" id="text-5">
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #0000ee;">inference</span> = ed.ReparameterizationKLKLqp(
+<pre class="src src-python"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
     latent_vars={
         logodds_w: q_logodds_w,
         logodds_v: q_logodds_v,
@@ -461,54 +461,54 @@ simply apply the above result to get:
         x1: x_gwas,
         y1: y_gwas,
     })
-inference.run(n_iter=2000, optimizer=<span style="color: #00cdcd;">'rmsprop'</span>)
-</code></pre>
+inference.run(n_iter=2000, optimizer=<span class="org-string">'rmsprop'</span>)
+</pre>
 </div>
 </div>
 </div>
-<div id="outline-container-org508b2fe" class="outline-2">
-<h2 id="org508b2fe"><span class="section-number-2">6</span> Model evaluation</h2>
+<div id="outline-container-org3931ec2" class="outline-2">
+<h2 id="org3931ec2"><span class="section-number-2">6</span> Model evaluation</h2>
 <div class="outline-text-2" id="text-6">
 <div class="org-src-container">
-<pre><code class="src src-python"><span style="color: #00cd00;">import</span> matplotlib.gridspec
-<span style="color: #00cd00;">import</span> matplotlib.pyplot <span style="color: #00cd00;">as</span> plt
+<pre class="src src-python"><span class="org-keyword">import</span> matplotlib.gridspec
+<span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
 
-<span style="color: #0000ee;">sess</span> = ed.get_session()
-<span style="color: #0000ee;">w</span> = sess.run(q_w.pip)
-<span style="color: #0000ee;">v</span> = sess.run(q_v.pip)
+<span class="org-variable-name">sess</span> = ed.get_session()
+<span class="org-variable-name">w</span> = sess.run(q_w.pip)
+<span class="org-variable-name">v</span> = sess.run(q_v.pip)
 
-plt.switch_backend(<span style="color: #00cdcd;">'pdf'</span>)
-<span style="color: #0000ee;">gs</span> = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[100, 1])
-<span style="color: #0000ee;">fig</span> = plt.gcf()
+plt.switch_backend(<span class="org-string">'pdf'</span>)
+<span class="org-variable-name">gs</span> = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[100, 1])
+<span class="org-variable-name">fig</span> = plt.gcf()
 fig.set_size_inches(8, 2)
 plt.clf()
 plt.subplot(gs[0])
-plt.imshow(w.T, cmap=<span style="color: #00cdcd;">'Greys'</span>)
-<span style="color: #0000ee;">ax</span> = plt.gca()
+plt.imshow(w.T, cmap=<span class="org-string">'Greys'</span>)
+<span class="org-variable-name">ax</span> = plt.gca()
 ax.set_xticks([])
 ax.set_yticks([])
 ax.set_xticklabels([])
 ax.set_yticklabels([])
-ax.set_xlabel(<span style="color: #00cdcd;">'Variants'</span>)
-ax.set_ylabel(<span style="color: #00cdcd;">'Genes'</span>)
+ax.set_xlabel(<span class="org-string">'Variants'</span>)
+ax.set_ylabel(<span class="org-string">'Genes'</span>)
 
 plt.subplot(gs[1])
-plt.imshow(v, cmap=<span style="color: #00cdcd;">'Greys'</span>)
-<span style="color: #0000ee;">ax</span> = plt.gca()
+plt.imshow(v, cmap=<span class="org-string">'Greys'</span>)
+<span class="org-variable-name">ax</span> = plt.gca()
 ax.set_xticks([])
 ax.set_yticks([])
 ax.set_xticklabels([])
 ax.set_yticklabels([])
-ax.set_ylabel(<span style="color: #00cdcd;">'Genes'</span>)
-plt.savefig(<span style="color: #00cdcd;">'coefficients'</span>)
+ax.set_ylabel(<span class="org-string">'Genes'</span>)
+plt.savefig(<span class="org-string">'coefficients'</span>)
 plt.close()
-</code></pre>
+</pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org762b12f" class="outline-2">
-<h2 id="org762b12f"><span class="section-number-2">7</span> Limitations</h2>
+<div id="outline-container-org8fdf8a5" class="outline-2">
+<h2 id="org8fdf8a5"><span class="section-number-2">7</span> Limitations</h2>
 <div class="outline-text-2" id="text-7">
 <p>
 Suppose we generated data from both mediated and unmediated effects:
@@ -550,7 +550,7 @@ matrix is built on the rest of the genome.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-10-04 Wed 19:26</p>
+<p class="date">Created: 2017-11-06 Mon 20:28</p>
 <p class="creator">Emacs 25.1.1 (Org mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
