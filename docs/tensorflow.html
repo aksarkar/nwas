@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-11-06 Mon 20:28 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2017-11-14 Tue 22:56 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spike-and-slab regression in tensorflow</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Abhishek Sarkar" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Abhishek Sarkar">
 <style type="text/css">
  <!--/*--><![CDATA[/*><!--*/
   .title  { text-align: center;
@@ -180,12 +178,9 @@
   .org-svg { width: 90%; }
   /*]]>*/-->
 </style>
+<link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cosmo/bootstrap.min.css" rel="stylesheet" />
 <link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
-<link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<style type="text/css">body {width: 60em; margin:auto} pre.src {overflow:auto}</style>
 <script type="text/javascript">
 /*
 @licstart  The following is the entire license notice for the
@@ -240,16 +235,16 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgefc6b85">Setup</a></li>
-<li><a href="#org79bb38f">Simulate some data</a></li>
+<li><a href="#org29ff1c6">Setup</a></li>
+<li><a href="#org07e980b">Simulate some data</a></li>
 <li><a href="#org8c6378e">Fit the model</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-orgefc6b85" class="outline-2">
-<h2 id="orgefc6b85">Setup</h2>
-<div class="outline-text-2" id="text-orgefc6b85">
+<div id="outline-container-org29ff1c6" class="outline-2">
+<h2 id="org29ff1c6">Setup</h2>
+<div class="outline-text-2" id="text-org29ff1c6">
 <div class="org-src-container">
 <pre class="src src-shell">mkdir -p $<span class="org-variable-name">SCRATCH</span>/nwas
 </pre>
@@ -276,9 +271,9 @@ ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f k
 </div>
 </div>
 
-<div id="outline-container-org79bb38f" class="outline-2">
-<h2 id="org79bb38f">Simulate some data</h2>
-<div class="outline-text-2" id="text-org79bb38f">
+<div id="outline-container-org07e980b" class="outline-2">
+<h2 id="org07e980b">Simulate some data</h2>
+<div class="outline-text-2" id="text-org07e980b">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">p</span> = 1000
 <span class="org-variable-name">n_train</span> = 500
@@ -305,248 +300,28 @@ ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f k
 </pre>
 </div>
 
-<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
-
-
-<colgroup>
-<col  class="org-right" />
-
-<col  class="org-right" />
-
-<col  class="org-right" />
-
-<col  class="org-right" />
-
-<col  class="org-right" />
-
-<col  class="org-right" />
-
-<col  class="org-right" />
-
-<col  class="org-right" />
-</colgroup>
-<tbody>
-<tr>
-<td class="org-right">0</td>
-<td class="org-right">-50276.6</td>
-<td class="org-right">-45306.1</td>
-<td class="org-right">0.0</td>
-<td class="org-right">4244.26</td>
-<td class="org-right">674.097</td>
-<td class="org-right">51.0381</td>
-<td class="org-right">1.03809</td>
-</tr>
-
-<tr>
-<td class="org-right">100</td>
-<td class="org-right">-22879.1</td>
-<td class="org-right">-20386.2</td>
-<td class="org-right">0.638839</td>
-<td class="org-right">2026.68</td>
-<td class="org-right">423.719</td>
-<td class="org-right">41.0992</td>
-<td class="org-right">1.40355</td>
-</tr>
-
-<tr>
-<td class="org-right">200</td>
-<td class="org-right">-5532.49</td>
-<td class="org-right">-4237.59</td>
-<td class="org-right">0.658222</td>
-<td class="org-right">926.874</td>
-<td class="org-right">332.561</td>
-<td class="org-right">33.0398</td>
-<td class="org-right">2.43145</td>
-</tr>
-
-<tr>
-<td class="org-right">300</td>
-<td class="org-right">-1946.7</td>
-<td class="org-right">-1373.6</td>
-<td class="org-right">0.594758</td>
-<td class="org-right">346.712</td>
-<td class="org-right">196.336</td>
-<td class="org-right">25.9544</td>
-<td class="org-right">4.09383</td>
-</tr>
-
-<tr>
-<td class="org-right">400</td>
-<td class="org-right">-1522.3</td>
-<td class="org-right">-1258.54</td>
-<td class="org-right">0.504074</td>
-<td class="org-right">117.999</td>
-<td class="org-right">119.789</td>
-<td class="org-right">19.7402</td>
-<td class="org-right">6.22503</td>
-</tr>
-
-<tr>
-<td class="org-right">500</td>
-<td class="org-right">-1317.52</td>
-<td class="org-right">-1164.11</td>
-<td class="org-right">0.434732</td>
-<td class="org-right">60.1215</td>
-<td class="org-right">71.7515</td>
-<td class="org-right">14.4794</td>
-<td class="org-right">7.06086</td>
-</tr>
-
-<tr>
-<td class="org-right">600</td>
-<td class="org-right">-1244.91</td>
-<td class="org-right">-1137.09</td>
-<td class="org-right">0.395889</td>
-<td class="org-right">41.7949</td>
-<td class="org-right">47.8878</td>
-<td class="org-right">10.7116</td>
-<td class="org-right">7.42407</td>
-</tr>
-
-<tr>
-<td class="org-right">700</td>
-<td class="org-right">-1214.53</td>
-<td class="org-right">-1112.81</td>
-<td class="org-right">0.392515</td>
-<td class="org-right">46.2967</td>
-<td class="org-right">37.8422</td>
-<td class="org-right">10.1279</td>
-<td class="org-right">7.4531</td>
-</tr>
-
-<tr>
-<td class="org-right">800</td>
-<td class="org-right">-1227.52</td>
-<td class="org-right">-1125.05</td>
-<td class="org-right">0.3878</td>
-<td class="org-right">49.0172</td>
-<td class="org-right">35.6815</td>
-<td class="org-right">10.4213</td>
-<td class="org-right">7.35653</td>
-</tr>
-
-<tr>
-<td class="org-right">900</td>
-<td class="org-right">-1201.09</td>
-<td class="org-right">-1100.08</td>
-<td class="org-right">0.383958</td>
-<td class="org-right">49.222</td>
-<td class="org-right">33.9632</td>
-<td class="org-right">10.47</td>
-<td class="org-right">7.36142</td>
-</tr>
-
-<tr>
-<td class="org-right">1000</td>
-<td class="org-right">-1205.57</td>
-<td class="org-right">-1104.18</td>
-<td class="org-right">0.385103</td>
-<td class="org-right">49.3583</td>
-<td class="org-right">34.1467</td>
-<td class="org-right">10.5507</td>
-<td class="org-right">7.33199</td>
-</tr>
-
-<tr>
-<td class="org-right">1100</td>
-<td class="org-right">-1204.0</td>
-<td class="org-right">-1101.81</td>
-<td class="org-right">0.384149</td>
-<td class="org-right">50.0987</td>
-<td class="org-right">34.247</td>
-<td class="org-right">10.5458</td>
-<td class="org-right">7.29553</td>
-</tr>
-
-<tr>
-<td class="org-right">1200</td>
-<td class="org-right">-1221.45</td>
-<td class="org-right">-1116.99</td>
-<td class="org-right">0.387258</td>
-<td class="org-right">50.2331</td>
-<td class="org-right">36.2046</td>
-<td class="org-right">10.5254</td>
-<td class="org-right">7.48952</td>
-</tr>
-
-<tr>
-<td class="org-right">1300</td>
-<td class="org-right">-1199.18</td>
-<td class="org-right">-1094.58</td>
-<td class="org-right">0.389311</td>
-<td class="org-right">51.4891</td>
-<td class="org-right">35.4226</td>
-<td class="org-right">10.3546</td>
-<td class="org-right">7.34145</td>
-</tr>
-
-<tr>
-<td class="org-right">1400</td>
-<td class="org-right">-1207.06</td>
-<td class="org-right">-1100.71</td>
-<td class="org-right">0.390911</td>
-<td class="org-right">52.0812</td>
-<td class="org-right">36.2315</td>
-<td class="org-right">10.5319</td>
-<td class="org-right">7.50345</td>
-</tr>
-
-<tr>
-<td class="org-right">1500</td>
-<td class="org-right">-1220.37</td>
-<td class="org-right">-1114.54</td>
-<td class="org-right">0.387939</td>
-<td class="org-right">52.0081</td>
-<td class="org-right">35.9887</td>
-<td class="org-right">10.4323</td>
-<td class="org-right">7.40387</td>
-</tr>
-
-<tr>
-<td class="org-right">1600</td>
-<td class="org-right">-1216.39</td>
-<td class="org-right">-1110.51</td>
-<td class="org-right">0.38914</td>
-<td class="org-right">51.7507</td>
-<td class="org-right">36.3432</td>
-<td class="org-right">10.4283</td>
-<td class="org-right">7.3602</td>
-</tr>
-
-<tr>
-<td class="org-right">1700</td>
-<td class="org-right">-1199.5</td>
-<td class="org-right">-1092.05</td>
-<td class="org-right">0.389806</td>
-<td class="org-right">52.3625</td>
-<td class="org-right">37.2076</td>
-<td class="org-right">10.4828</td>
-<td class="org-right">7.39358</td>
-</tr>
-
-<tr>
-<td class="org-right">1800</td>
-<td class="org-right">-1211.6</td>
-<td class="org-right">-1103.3</td>
-<td class="org-right">0.389046</td>
-<td class="org-right">53.3261</td>
-<td class="org-right">37.0924</td>
-<td class="org-right">10.4934</td>
-<td class="org-right">7.39297</td>
-</tr>
-
-<tr>
-<td class="org-right">1900</td>
-<td class="org-right">-1197.18</td>
-<td class="org-right">-1089.74</td>
-<td class="org-right">0.387818</td>
-<td class="org-right">53.2087</td>
-<td class="org-right">36.4421</td>
-<td class="org-right">10.3925</td>
-<td class="org-right">7.39289</td>
-</tr>
-</tbody>
-</table>
+<p>
+0 -34255.0 -27758.8 5477.04 967.102 51.0381 1.03809 0.0
+100 -6651.68 -3599.32 2483.7 526.675 40.9353 1.04505 0.700091
+200 -2806.15 -1221.88 1253.17 297.288 32.7439 1.0729 0.696577
+300 -2373.25 -1505.0 632.846 208.78 25.5455 1.07799 0.675133
+400 -1442.71 -992.964 273.046 156.308 19.2886 1.10713 0.637274
+500 -1495.0 -1128.92 239.217 111.646 14.0358 1.17411 0.60659
+600 -2217.85 -2061.19 53.2963 92.1549 9.96691 1.23999 0.553866
+700 -1296.18 -1172.97 47.6055 66.503 7.79766 1.30285 0.501077
+800 -1266.94 -1164.16 43.5988 50.8132 6.95652 1.41365 0.470785
+900 -1284.37 -1185.89 44.6987 44.8126 7.46085 1.51574 0.449707
+1000 -1172.24 -1060.97 61.6141 40.0548 7.95285 1.6441 0.441132
+1100 -1162.9 -1055.97 56.8908 39.5686 8.76752 1.69527 0.446136
+1200 -1166.82 -1064.22 53.2428 38.5486 9.06725 1.73905 0.449829
+1300 -1158.23 -1059.18 49.9196 38.2382 9.12832 1.76206 0.434564
+1400 -1173.11 -1078.16 47.5733 36.2916 9.28149 1.79904 0.434778
+1500 -1228.55 -1116.91 65.5 34.8195 9.56611 1.75482 0.426361
+1600 -1164.83 -1070.78 47.7836 35.3466 8.97658 1.94306 0.430834
+1700 -1192.86 -1094.41 49.5241 37.6729 9.24082 2.00961 0.433955
+1800 -1210.13 -1113.72 50.1807 35.2172 9.1263 1.88751 0.425445
+1900 -1233.57 -1139.14 47.9664 35.2376 9.31275 1.91333 0.427925
+</p>
 
 <div class="org-src-container">
 <pre class="src src-ipython">opt[-5:]
@@ -554,11 +329,11 @@ ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f k
 </div>
 
 <pre class="example">
-[array([-4.15133905], dtype=float32),
-   array([ 0.09275417], dtype=float32),
-   array([-3.37005305], dtype=float32),
-   array([ 0.0616137], dtype=float32),
-   -1205.1755]
+[array([-4.01579666], dtype=float32),
+   array([ 0.16181739], dtype=float32),
+   array([-0.98078787], dtype=float32),
+   array([ 0.15607767], dtype=float32),
+   -1188.2214]
 </pre>
 
 <div class="org-src-container">
@@ -577,12 +352,12 @@ ax[2].set_xlabel(<span class="org-string">'True and false positive variants'</sp
 </div>
 
 <pre class="example">
-&lt;matplotlib.text.Text at 0x7f89aa19d208&gt;
+&lt;matplotlib.text.Text at 0x7f8b31ff8c18&gt;
 
 </pre>
 
 <div class="figure">
-<p><img src="fit.png" alt="fit.png" />
+<p><img src="fit.png" alt="fit.png">
 </p>
 </div>
 </div>
@@ -590,7 +365,7 @@ ax[2].set_xlabel(<span class="org-string">'True and false positive variants'</sp
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-06 Mon 20:28</p>
+<p class="date">Created: 2017-11-14 Tue 22:56</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

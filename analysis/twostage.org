@@ -1,16 +1,5 @@
 #+TITLE: Two-stage regression
-#+AUTHOR: Abhishek Sarkar
-#+EMAIL: aksarkar@uchicago.edu
-#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
-#+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
-#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
-#+OPTIONS: todo:t |:t
-#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
-#+DESCRIPTION:
-#+EXCLUDE_TAGS: noexport
-#+KEYWORDS:
-#+LANGUAGE: en
-#+SELECT_TAGS: export
+#+SETUPFILE: /home/aksarkar/.emacs.d/org-templates/setup-hotlink.org
 
 * Introduction
 
@@ -62,7 +51,7 @@
 
   \[ y^1 \mid N(x^1 u, \sigma^2) \]
 
-  #+BEGIN_SRC python :tangle pleiotropy.py :exports none
+  #+BEGIN_SRC ipython :tangle pleiotropy.py :exports none
     import edward as ed
     import numpy
     import nwas
@@ -105,7 +94,7 @@
 
 * Joint model
 
-  #+BEGIN_SRC python :tangle pleiotropy.py
+  #+BEGIN_SRC ipython :tangle pleiotropy.py
     ed.set_seed(0)
 
     # Data
@@ -138,7 +127,7 @@
 
 * Variational approximation
 
-  #+BEGIN_SRC python :tangle pleiotropy.py
+  #+BEGIN_SRC ipython :tangle pleiotropy.py
     q_logodds_w = Normal(loc=tf.Variable(tf.random_normal([1])),
                          scale=tf.Variable(tf.random_normal([1])))
     q_logodds_v = Normal(loc=tf.Variable(tf.random_normal([1])),
@@ -180,7 +169,7 @@
 
   \[ V_q[\eta_i v] = E_q[\eta_i] \diag(V_q[v]) E_q[\eta_i]' + E_q[v]' \diag(V_q[\eta_i]) E_q[v] + V_q[\eta_i]' V_q[v] \]
 
-  #+BEGIN_SRC python :tangle pleiotropy.py
+  #+BEGIN_SRC ipython :tangle pleiotropy.py
     q_v = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
                     loc=tf.Variable(tf.random_normal([m, 1])),
                     scale=tf.Variable(tf.zeros([m, 1])))
@@ -206,7 +195,7 @@
 
 * Model fitting
 
-  #+BEGIN_SRC python :tangle pleiotropy.py
+  #+BEGIN_SRC ipython :tangle pleiotropy.py
     inference = ed.ReparameterizationKLKLqp(
         latent_vars={
             logodds_w: q_logodds_w,
@@ -231,7 +220,7 @@
   #+END_SRC
 * Model evaluation
 
-  #+BEGIN_SRC python :tangle pleiotropy.py
+  #+BEGIN_SRC ipython
     import matplotlib.gridspec
     import matplotlib.pyplot as plt
 

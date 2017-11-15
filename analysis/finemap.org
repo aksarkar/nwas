@@ -1,14 +1,7 @@
 #+TITLE: Fine mapping idea
-#+AUTHOR: Abhishek Sarkar
-#+EMAIL: aksarkar@uchicago.edu
-#+OPTIONS: num:nil
-#+SETUPFILE: /home/aksarkar/.local/src/org-html-themes/setup/theme-readtheorg.setup
-#+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer :async t :exports both :eval never-export
+#+SETUPFILE: /home/aksarkar/.emacs.d/org-templates/setup-hotlink.org
 
 * Proposed model
-
-  Revise the notation, using Latin for the model and Greek for the variational
-  approximation.
 
   \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
   \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
@@ -23,13 +16,13 @@
 
   \[ q(z_k \mid \pi) = \mathrm{Multinomial}(z_k; 1, \mathbf{\pi}_k) \]
 
-* Variational lower bound
+* Variational lower bound                                          :noexport:
 
   \[ \mathrm{ELBO} = \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] -
   KL(q(\mathbf{z}) \Vert p(\mathbf{z})) - KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z}))
   \]
-  \[ \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] = -\frac{v}{2} \sum_i
-  \left(y_i - \sum_j x_{ij} \mathbb{E}_q[w_j]\right)^2 - \sum_{i,j} x_{ij}^2 \mathbb{V}_q[w_j] \]
+  \[ \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] = -\frac{1}{2}
+  \left(n \log(2 \pi \sigma^2) + \Vert y - \right)\]
 
   \[ \mathbb{E}_q[w_j] = \sum_k \pi_{kj} \mu_{kj} \]
   \[ \mathbb{V}_q[w_j] = \sum_k \pi_{kj} \phi_{kj}^{-1} + \pi_{kj} (1 - \pi_{kj}) \mu_{kj}^2 \]
@@ -41,11 +34,11 @@
   \[ KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z})) =
   \frac{1}{2} \sum_{j,k} \pi_{kj} \left(1 + \ln (v v_b) - \ln \phi_{kj} + v v_b (\mu_{kj}^2 + \phi_{kj}^{-1}) \right)\]
 
-* Setup
+* Setup                                                            :noexport:
 
   #+NAME: srun
   #+BEGIN_SRC shell :dir (concat (file-name-as-directory (getenv "SCRATCH")) "spikeslab")
-  sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
+  sbatch --partition=gpu2 --mem=4G --time=6:00:00 --job-name=ipython3 --output=ipython3.out
   #!/bin/bash
   source activate nwas
   rm -f $HOME/.local/share/jupyter/runtime/kernel-aksarkar.json
@@ -53,17 +46,17 @@
   #+END_SRC
 
   #+RESULTS: srun
-  : Submitted batch job 39733997
+  : Submitted batch job 40253608
 
   #+NAME: imports
   #+BEGIN_SRC ipython
     %matplotlib inline
-    import edward as ed
+
+    import colorcet
     import matplotlib.pyplot as plt
     import nwas
     import numpy as np
     import pandas as pd
-    import pyplink
     import tensorflow as tf
   #+END_SRC
 
@@ -71,64 +64,53 @@
   :RESULTS:
   :END:
 
-* Simulated data
-
-  #+NAME: sim
-  #+BEGIN_SRC ipython
-    with nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) as s:
-      x, y = s.sample_gaussian(n=500)
-      x = x.astype('float32')
-      y = y.reshape(-1, 1).astype('float32')
-  #+END_SRC
-
-  #+RESULTS: sim
-  :RESULTS:
-  :END:
-
-* Coordinate ascent
-
-  Between the old approximation and this approximation, the only difference is
-  \(KL\left(q(z)\Vert p(z)\right)\), but it has similar form. This suggests
-  that the same update would work.
-
-  The real problem is that the optimization is now constrained to have \(\pi\)
-  on the probability simplex, which isn't captured in the objective function.
-
-  Normalizing \(\pi_k\) after each update does not increase the ELBO.
+* Proposed algorithm
 
   #+BEGIN_SRC ipython
-    def elbo(x, y, pip, mean, var, effect_var, residual_var):
-      n, p = x.shape
-      genetic_value_mean = np.dot(x, (pip * mean).sum(axis=0, keepdims=True).T)
-      genetic_value_var = np.dot(np.square(x), (pip * var.T + pip * (1 - pip) * np.square(mean)).sum(axis=0, keepdims=True).T)
-      llik = -.5 / residual_var * (np.square(y - genetic_value_mean) - genetic_value_var).sum()
+    def elbo(n, p, d, xr, xrk, y, pip, mean, var, effect_var, residual_var):
+      error = np.square(y - xr).sum()
+      error -= np.square(xrk).sum()
+      # var doesn't depend on factor?
+      error += (d * (pip * (np.square(mean) + var.T)).sum(axis=0)).sum()
+      error /= residual_var
+      error += n * np.log(residual_var)
+      error *= -.5
+
       # Assume prior probability 1/p for each variant
       kl_z = (pip * (np.log(pip) + np.log(p))).sum()
       kl_b = .5 * (pip * (1 + np.log(effect_var * residual_var) - np.log(var.T) + (np.square(mean) + var.T) / (effect_var * residual_var))).sum()
-      return llik, kl_z, kl_b
+      return error, kl_z, kl_b
 
     def coordinate_ascent(x, y, effect_var, residual_var, l=5, num_epochs=200):
       n, p = x.shape
+
+      # Prior
       pi = np.ones((p, 1))
-      d = np.einsum('ij,ij->j', x, x).reshape(-1, 1)
-      xy = x.T.dot(y)
+
+      # Variational parameters
       pip = np.zeros((l, p))
       mean = np.zeros((l, p))
       # Make sure everything is two dimensional to catch numpy broadcasting gotchas
+      d = np.einsum('ij,ij->j', x, x).reshape(-1, 1)
       var = (effect_var * residual_var / (effect_var * d + 1)).reshape(-1, 1)
-      eta = np.dot(x, (pip * mean).sum(axis=0, keepdims=True).T)
+
+      # Precompute more things
+      xy = x.T.dot(y)
+      xr = np.dot(x, (pip * mean).sum(axis=0, keepdims=True).T)
+
       elbo_ = None
       trace = []
       for epoch in range(num_epochs):
         for k in range(l):
-          eta -= np.dot(x, (pip * mean)[k:k + 1].T)
-          mean[k:k + 1] = (var / residual_var * (xy - x.T.dot(eta))).T
+          xr -= np.dot(x, (pip * mean)[k:k + 1].T)
+          mean[k:k + 1] = (var / residual_var * (xy - x.T.dot(xr))).T
           pip[k:k + 1] = (pi * np.exp(.5 * (np.log(var / (effect_var * residual_var)) + np.square(mean[k:k + 1].T) / var))).T
           pip[k] /= pip[k].sum()
-          eta += np.dot(x, (pip * mean)[k:k + 1].T)
-        llik, kl_z, kl_b = elbo(x, y, pip, mean, var, effect_var, residual_var)
-        update = llik - kl_z - kl_b
-        trace.append([update, llik, kl_z, kl_b])
+          xr += np.dot(x, (pip * mean)[k:k + 1].T)
+        xrk = x.dot((pip * mean).T)
+        error, kl_z, kl_b = elbo(n, p, d, xr, xrk, y, pip, mean, var, effect_var, residual_var)
+        update = error - kl_z - kl_b
+        trace.append([update, error, kl_z, kl_b])
         elbo_ = update
       return {'pip': pip,
               'mean': pip * mean,
@@ -137,27 +119,8 @@
               'trace': trace}
   #+END_SRC
 
-  #+NAME: coordinate-ascent
-  #+BEGIN_SRC ipython :results raw drawer
-    opt = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
-    pd.DataFrame(opt['trace'], columns=['elbo', 'llik', 'kl_z', 'kl_b'])
-  #+END_SRC
-
-  #+RESULTS: coordinate-ascent
+  #+RESULTS:
   :RESULTS:
-  #+BEGIN_EXAMPLE
-           elbo        llik       kl_z       kl_b
-    0 -268.129734 -226.243188  25.352915  16.533631
-    1 -268.576104 -226.869986  25.130829  16.575289
-    2 -268.640320 -226.956885  25.105590  16.577845
-    3 -268.635618 -226.929528  25.125407  16.580682
-    4 -268.617950 -226.879634  25.153811  16.584505
-    5 -268.593716 -226.816238  25.188131  16.589346
-    6 -268.535093 -226.682496  25.255828  16.596769
-    7 -268.360134 -226.292446  25.456290  16.611398
-    8 -268.081829 -225.462570  25.979514  16.639745
-    9 -268.019034 -224.800028  26.550398  16.668607
-  #+END_EXAMPLE
   :END:
 
   #+BEGIN_SRC ipython
@@ -171,7 +134,7 @@
       ax[0].set_ylabel('True effect size')
       ax[1].bar(np.arange(np.sum(q)), opt['mean'].sum(axis=0)[q])
       ax[1].set_ylabel('Estimated effect size')
-      im = ax[2].imshow(opt['pip'][:,q], cmap='Reds', vmin=0, vmax=1)
+      im = ax[2].imshow(opt['pip'][:,q], cmap=colorcet.cm['Reds'], vmin=0, vmax=1)
       ax[2].set_yticks(np.arange(opt['pip'].shape[0]))
       ax[2].set_ylabel('Posterior inclusion probability')
       ax[2].set_xlabel('True and false positive variants')
@@ -180,6 +143,88 @@
 
   #+RESULTS:
   :RESULTS:
+  :END:
+
+* Null simulation
+
+  #+NAME: null-coordinate-ascent
+  #+BEGIN_SRC ipython :results raw drawer
+    x = np.random.binomial(2, 0.5, size=(500, 1000))
+    y = np.random.normal(size=(500, 1))
+    opt = coordinate_ascent(x, y, effect_var=1, residual_var=y.var(), l=5, num_epochs=10)
+    pd.DataFrame(opt['trace'], columns=['elbo', 'error', 'kl_z', 'kl_b'])
+  #+END_SRC
+
+  #+RESULTS: null-coordinate-ascent
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+            elbo        error      kl_z       kl_b
+    0 -4256.800943 -4237.421683  0.329539  19.049720
+    1 -4235.690940 -4216.320378  0.320814  19.049748
+    2 -4228.373109 -4209.004873  0.318495  19.049741
+    3 -4221.334778 -4201.968795  0.316248  19.049735
+    4 -4214.629746 -4195.265910  0.314107  19.049729
+    5 -4208.239606 -4188.877816  0.312067  19.049723
+    6 -4202.147187 -4182.787349  0.310121  19.049718
+    7 -4196.336301 -4176.978323  0.308265  19.049713
+    8 -4190.791683 -4171.435481  0.306494  19.049708
+    9 -4185.498939 -4166.144433  0.304803  19.049703
+  #+END_EXAMPLE
+  :END:
+
+  #+BEGIN_SRC ipython :ipyfile null-coordinate-ascent-opt.png
+    plot_categorical_slab_fit(s, opt)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  [[file:null-coordinate-ascent-opt.png]]
+  :END:
+
+* Idealized simulation
+
+  Simulate from a linear model:
+
+  \[ f_j \sim U(0.01, 0.5) \]
+  \[ x_{ij} \sim Binomial(2, f_j) \]
+  \[ \beta_j \mid z_j \sim N(0, 1) \]
+  \[ y \sim N(X \beta, \frac{1}{h^2}\left(V[X\beta] - 1 \right)) \]
+
+  #+NAME: sim
+  #+BEGIN_SRC ipython
+    with nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) as s:
+      x, y = s.sample_gaussian(n=500)
+      x = x.astype('float32')
+      y = y.reshape(-1, 1).astype('float32')
+  #+END_SRC
+
+  #+RESULTS: sim
+  :RESULTS:
+  :END:
+
+  Fix the residual variance to the true value used in the simulation.
+
+  #+NAME: idealized-coordinate-ascent
+  #+BEGIN_SRC ipython :results raw drawer
+    opt = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
+    pd.DataFrame(opt['trace'], columns=['elbo', 'error', 'kl_z', 'kl_b'])
+  #+END_SRC
+
+  #+RESULTS: idealized-coordinate-ascent
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+              elbo          error       kl_z       kl_b
+    0 -221817.516715 -221775.630169  25.352916  16.533631
+    1 -228254.989057 -228213.282939  25.130829  16.575289
+    2 -228515.970511 -228474.287076  25.105591  16.577845
+    3 -228456.315742 -228414.609651  25.125409  16.580682
+    4 -228396.411357 -228354.673039  25.153813  16.584505
+    5 -228336.132212 -228294.354731  25.188135  16.589346
+    6 -228293.771055 -228251.918451  25.255835  16.596769
+    7 -228360.679959 -228318.612251  25.456309  16.611399
+    8 -228784.313766 -228741.694470  25.979550  16.639746
+    9 -229490.503252 -229447.284226  26.550417  16.668608
+  #+END_EXAMPLE
   :END:
 
   #+BEGIN_SRC ipython :ipyfile coordinate-ascent-opt.png
@@ -191,16 +236,70 @@
   [[file:coordinate-ascent-opt.png]]
   :END:
 
-  *TODO:* why is the log likelihood decreasing in the second round of updates?
+  Try restricting to a single factor.
+  
+  #+BEGIN_SRC ipython
+    opt = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=1, num_epochs=10)
+    pd.DataFrame(opt['trace'], columns=['elbo', 'error', 'kl_z', 'kl_b'])
+  #+END_SRC
 
-  #+BEGIN_SRC ipython :ipyfile coordinate-ascent-1-iter.png
-    opt = coordinate_ascent(x, y, l=5, effect_var=1, residual_var=s.residual_var, num_epochs=1)
+  #+RESULTS:
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+              elbo          error      kl_z      kl_b
+    0 -100870.914631 -100860.191834  6.907755  3.815042
+    1 -100870.914631 -100860.191834  6.907755  3.815042
+    2 -100870.914631 -100860.191834  6.907755  3.815042
+    3 -100870.914631 -100860.191834  6.907755  3.815042
+    4 -100870.914631 -100860.191834  6.907755  3.815042
+    5 -100870.914631 -100860.191834  6.907755  3.815042
+    6 -100870.914631 -100860.191834  6.907755  3.815042
+    7 -100870.914631 -100860.191834  6.907755  3.815042
+    8 -100870.914631 -100860.191834  6.907755  3.815042
+    9 -100870.914631 -100860.191834  6.907755  3.815042
+  #+END_EXAMPLE
+  :END:
+
+  #+BEGIN_SRC ipython :ipyfile coordinate-ascent-opt-1.png
     plot_categorical_slab_fit(s, opt)
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
-  [[file:coordinate-ascent-1-iter.png]]
+  [[file:coordinate-ascent-opt-1.png]]
+  :END:
+
+  Add factors one at a time
+
+  #+BEGIN_SRC ipython
+    opt = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=2, num_epochs=10)
+    pd.DataFrame(opt['trace'], columns=['elbo', 'error', 'kl_z', 'kl_b'])
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+              elbo          error       kl_z      kl_b
+    0 -182282.947936 -182261.799655  13.815511  7.332770
+    1 -188764.718437 -188743.531604  13.815511  7.371323
+    2 -188775.749384 -188754.562485  13.815511  7.371388
+    3 -188775.767889 -188754.580990  13.815511  7.371388
+    4 -188775.767920 -188754.581021  13.815511  7.371388
+    5 -188775.767920 -188754.581021  13.815511  7.371388
+    6 -188775.767920 -188754.581021  13.815511  7.371388
+    7 -188775.767920 -188754.581021  13.815511  7.371388
+    8 -188775.767920 -188754.581021  13.815511  7.371388
+    9 -188775.767920 -188754.581021  13.815511  7.371388
+  #+END_EXAMPLE
+  :END:
+
+  #+BEGIN_SRC ipython :ipyfile coordinate-ascent-opt-2.png
+    plot_categorical_slab_fit(s, opt)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  [[file:coordinate-ascent-opt-2.png]]
   :END:
 
 * Harder simulation

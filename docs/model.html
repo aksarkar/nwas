@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-11-06 Mon 20:28 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2017-11-14 Tue 22:56 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Proposed model</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Abhishek Sarkar" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Abhishek Sarkar Abhishek Sarkar">
 <style type="text/css">
  <!--/*--><![CDATA[/*><!--*/
   .title  { text-align: center;
@@ -180,6 +178,9 @@
   .org-svg { width: 90%; }
   /*]]>*/-->
 </style>
+<link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cosmo/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+<style type="text/css">body {width: 60em; margin:auto} pre.src {overflow:auto}</style>
 <script type="text/javascript">
 /*
 @licstart  The following is the entire license notice for the
@@ -256,20 +257,20 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org933b906">1. Simulation setup</a></li>
-<li><a href="#org43e3e01">2. Ordinary TWAS</a></li>
-<li><a href="#org1f182d9">3. Joint model</a></li>
-<li><a href="#orgc11aeaf">4. Variational approximation</a></li>
-<li><a href="#org6aaf465">5. Model fitting</a></li>
-<li><a href="#org3931ec2">6. Model evaluation</a></li>
-<li><a href="#org8fdf8a5">7. Limitations</a></li>
+<li><a href="#org933b906">Simulation setup</a></li>
+<li><a href="#org43e3e01">Ordinary TWAS</a></li>
+<li><a href="#org1f182d9">Joint model</a></li>
+<li><a href="#orgc11aeaf">Variational approximation</a></li>
+<li><a href="#org6aaf465">Model fitting</a></li>
+<li><a href="#org3931ec2">Model evaluation</a></li>
+<li><a href="#org8fdf8a5">Limitations</a></li>
 </ul>
 </div>
 </div>
 
 <div id="outline-container-org933b906" class="outline-2">
-<h2 id="org933b906"><span class="section-number-2">1</span> Simulation setup</h2>
-<div class="outline-text-2" id="text-1">
+<h2 id="org933b906">Simulation setup</h2>
+<div class="outline-text-2" id="text-org933b906">
 <ul class="org-ul">
 <li>Generate random genotypes in linkage equilibrium</li>
 
@@ -308,18 +309,63 @@ equal to the simulated expression phenotypic variance.</li>
 <p>
 \[ y^1 \mid N(g^1 v, \sigma^2) \]
 </p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
+<span class="org-keyword">import</span> numpy
+<span class="org-keyword">import</span> nwas
+<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
+
+<span class="org-keyword">from</span> edward.models <span class="org-keyword">import</span> *
+<span class="org-keyword">from</span> nwas.models <span class="org-keyword">import</span> *
+
+<span class="org-variable-name">p</span> = 100  <span class="org-comment-delimiter"># </span><span class="org-comment">Number of SNPs</span>
+<span class="org-variable-name">p_qtl</span> = 3
+<span class="org-variable-name">m</span> = 10  <span class="org-comment-delimiter"># </span><span class="org-comment">Number of genes</span>
+<span class="org-variable-name">n_ref</span> = 500
+<span class="org-variable-name">n_gwas</span> = 10000
+<span class="org-variable-name">pve_g</span> = 0.5
+<span class="org-variable-name">pve_y</span> = 0.01
+
+<span class="org-keyword">with</span> nwas.simulation.simulation(p, pve_g, [(p_qtl, 1)], 0) <span class="org-keyword">as</span> s:
+    <span class="org-variable-name">x_ref</span>, <span class="org-variable-name">g_ref</span> = s.sample_gaussian(n=n_ref)
+    <span class="org-variable-name">g_noise</span> = s.random.normal(scale=numpy.sqrt(s.pheno_var), size=(n_ref, m - 1))
+    <span class="org-variable-name">g_ref</span> = numpy.hstack((g_ref.reshape(-1, 1), g_noise))
+    <span class="org-variable-name">x_gwas</span>, <span class="org-variable-name">g_gwas</span> = s.sample_gaussian(n=n_gwas)
+
+    <span class="org-comment-delimiter"># </span><span class="org-comment">True effect size of 1</span>
+    <span class="org-variable-name">y_gwas</span> = g_gwas + s.random.normal(scale=numpy.sqrt(g_gwas.var() * (1 / pve_y - 1)), size=n_gwas)
+    <span class="org-variable-name">y_gwas</span> -= y_gwas.mean()
+
+    <span class="org-variable-name">x_ref</span> = x_ref.astype(<span class="org-string">'float32'</span>)
+    <span class="org-variable-name">g_ref</span> = g_ref.astype(<span class="org-string">'float32'</span>)
+    <span class="org-variable-name">x_gwas</span> = x_gwas.astype(<span class="org-string">'float32'</span>)
+    <span class="org-variable-name">y_gwas</span> = y_gwas.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
+</pre>
+</div>
 </div>
 </div>
 
 <div id="outline-container-org43e3e01" class="outline-2">
-<h2 id="org43e3e01"><span class="section-number-2">2</span> Ordinary TWAS</h2>
+<h2 id="org43e3e01">Ordinary TWAS</h2>
+<div class="outline-text-2" id="text-org43e3e01">
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-keyword">import</span> sklearn.linear_model
+
+<span class="org-variable-name">m0</span> = sklearn.linear_model.ElasticNetCV().fit(x_ref, g_ref[:,0])
+<span class="org-keyword">print</span>(<span class="org-string">'Expression score = {:.3f}'</span>.<span class="org-builtin">format</span>(m0.score(x_ref, g_ref[:,0])))
+<span class="org-variable-name">m1</span> = sklearn.linear_model.LinearRegression().fit(m0.predict(x_gwas).reshape(-1, 1), y_gwas)
+<span class="org-keyword">print</span>(<span class="org-string">'Phenotype score = {:.3f}'</span>.<span class="org-builtin">format</span>(m1.score(m0.predict(x_gwas).reshape(-1, 1), y_gwas)))
+</pre>
+</div>
+</div>
 </div>
 
 <div id="outline-container-org1f182d9" class="outline-2">
-<h2 id="org1f182d9"><span class="section-number-2">3</span> Joint model</h2>
-<div class="outline-text-2" id="text-3">
+<h2 id="org1f182d9">Joint model</h2>
+<div class="outline-text-2" id="text-org1f182d9">
 <div class="org-src-container">
-<pre class="src src-python">ed.set_seed(0)
+<pre class="src src-ipython">ed.set_seed(0)
 
 <span class="org-comment-delimiter"># </span><span class="org-comment">Data</span>
 <span class="org-variable-name">x0</span> = tf.placeholder(tf.float32)
@@ -353,10 +399,10 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 
 <div id="outline-container-orgc11aeaf" class="outline-2">
-<h2 id="orgc11aeaf"><span class="section-number-2">4</span> Variational approximation</h2>
-<div class="outline-text-2" id="text-4">
+<h2 id="orgc11aeaf">Variational approximation</h2>
+<div class="outline-text-2" id="text-orgc11aeaf">
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-variable-name">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
+<pre class="src src-ipython"><span class="org-variable-name">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
 <span class="org-variable-name">q_logodds_v</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
@@ -411,7 +457,7 @@ simply apply the above result to get:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-variable-name">q_v</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
+<pre class="src src-ipython"><span class="org-variable-name">q_v</span> = SpikeSlab(logodds=tf.Variable(tf.zeros([m, 1])),
                 loc=tf.Variable(tf.random_normal([m, 1])),
                 scale=tf.Variable(tf.zeros([m, 1])))
 <span class="org-comment-delimiter"># </span><span class="org-comment">Conviently keep the necessary mean and variance around</span>
@@ -438,10 +484,10 @@ simply apply the above result to get:
 </div>
 
 <div id="outline-container-org6aaf465" class="outline-2">
-<h2 id="org6aaf465"><span class="section-number-2">5</span> Model fitting</h2>
-<div class="outline-text-2" id="text-5">
+<h2 id="org6aaf465">Model fitting</h2>
+<div class="outline-text-2" id="text-org6aaf465">
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
+<pre class="src src-ipython"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
     latent_vars={
         logodds_w: q_logodds_w,
         logodds_v: q_logodds_v,
@@ -467,10 +513,10 @@ inference.run(n_iter=2000, optimizer=<span class="org-string">'rmsprop'</span>)
 </div>
 </div>
 <div id="outline-container-org3931ec2" class="outline-2">
-<h2 id="org3931ec2"><span class="section-number-2">6</span> Model evaluation</h2>
-<div class="outline-text-2" id="text-6">
+<h2 id="org3931ec2">Model evaluation</h2>
+<div class="outline-text-2" id="text-org3931ec2">
 <div class="org-src-container">
-<pre class="src src-python"><span class="org-keyword">import</span> matplotlib.gridspec
+<pre class="src src-ipython"><span class="org-keyword">import</span> matplotlib.gridspec
 <span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
 
 <span class="org-variable-name">sess</span> = ed.get_session()
@@ -508,8 +554,8 @@ plt.close()
 </div>
 
 <div id="outline-container-org8fdf8a5" class="outline-2">
-<h2 id="org8fdf8a5"><span class="section-number-2">7</span> Limitations</h2>
-<div class="outline-text-2" id="text-7">
+<h2 id="org8fdf8a5">Limitations</h2>
+<div class="outline-text-2" id="text-org8fdf8a5">
 <p>
 Suppose we generated data from both mediated and unmediated effects:
 </p>
@@ -549,9 +595,8 @@ matrix is built on the rest of the genome.
 </div>
 </div>
 <div id="postamble" class="status">
-<p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-06 Mon 20:28</p>
-<p class="creator">Emacs 25.1.1 (Org mode 8.2.10)</p>
+<p class="author">Author: Abhishek Sarkar Abhishek Sarkar</p>
+<p class="date">Created: 2017-11-14 Tue 22:56</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

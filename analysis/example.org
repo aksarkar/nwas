@@ -1,17 +1,7 @@
 #+TITLE: Linear regression with spike and slab prior
-#+AUTHOR: Abhishek Sarkar
-#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t c:nil
-#+OPTIONS: creator:comment d:(not "LOGBOOK") date:t e:t email:nil f:t inline:t
-#+OPTIONS: num:t p:nil pri:nil stat:t tags:t tasks:t tex:t timestamp:t toc:t
-#+OPTIONS: todo:t |:t
-#+CREATOR: Emacs 25.1.1 (Org mode 8.2.10)
-#+DESCRIPTION:
-#+EXCLUDE_TAGS: noexport
-#+KEYWORDS:
-#+LANGUAGE: en
-#+SELECT_TAGS: export
+#+SETUPFILE: /home/aksarkar/.emacs.d/org-templates/setup-hotlink.org
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC ipython
   import edward as ed
   import matplotlib.pyplot as plt
   import numpy
@@ -25,7 +15,7 @@
 
 Simulate some data:
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC ipython
   p = 10000
   n_train = 7500
   n_validate = 1000
@@ -43,7 +33,7 @@ Simulate some data:
 
 Set up the model:
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC ipython
   x = tf.placeholder(tf.float32)
   logodds = Normal(loc=-numpy.log(p).astype('float32'), scale=tf.ones(1))
   scale = Normal(loc=tf.zeros([1]), scale=tf.ones([1]))
@@ -59,7 +49,7 @@ Set up the model:
 
 Set up the variational approximation:
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC ipython
   q_logodds = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
   q_scale = Normal(loc=tf.Variable(tf.random_normal([1])),
@@ -75,7 +65,7 @@ Set up the variational approximation:
 
 Fit the approximation:
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC ipython
   inference = ed.ReparameterizationKLKLqp(
       latent_vars={
           logodds: q_logodds,
@@ -93,7 +83,7 @@ Fit the approximation:
 
 Plot the fit:
 
-#+BEGIN_SRC python :tangle example.py :exports both :file example.pdf
+#+BEGIN_SRC ipython
   session = ed.get_session()
   pip = session.run(q_w.pip)
   est_w = session.run(q_w.mean())
@@ -118,7 +108,7 @@ Check the fit. We can't do this using ~ed.copy~ because the copied nodes remain
 in the graph (unlike the way it works in Theano), so we can't feed in data of
 different shapes.
 
-#+BEGIN_SRC python :tangle example.py
+#+BEGIN_SRC ipython
   def correlation_score(y_true, y_pred):
       R = 1 - (tf.reduce_sum(tf.square(y_true - y_pred)) /
                tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true))))

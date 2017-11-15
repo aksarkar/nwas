@@ -1,14 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<!-- 2017-11-06 Mon 20:28 -->
-<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- 2017-11-14 Tue 22:56 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fine mapping idea</title>
-<meta name="generator" content="Org mode" />
-<meta name="author" content="Abhishek Sarkar" />
+<meta name="generator" content="Org mode">
+<meta name="author" content="Abhishek Sarkar Abhishek Sarkar">
 <style type="text/css">
  <!--/*--><![CDATA[/*><!--*/
   .title  { text-align: center;
@@ -180,12 +178,9 @@
   .org-svg { width: 90%; }
   /*]]>*/-->
 </style>
+<link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cosmo/bootstrap.min.css" rel="stylesheet" />
 <link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
-<link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<style type="text/css">body {width: 60em; margin:auto} pre.src {overflow:auto}</style>
 <script type="text/javascript">
 /*
 @licstart  The following is the entire license notice for the
@@ -263,10 +258,9 @@ for the JavaScript code in this tag.
 <div id="text-table-of-contents">
 <ul>
 <li><a href="#org96c4e70">Proposed model</a></li>
-<li><a href="#orgf278122">Variational lower bound</a></li>
-<li><a href="#orga15f023">Setup</a></li>
-<li><a href="#org4012e94">Simulated data</a></li>
-<li><a href="#org531465f">Coordinate ascent</a></li>
+<li><a href="#org1108fc7">Proposed algorithm</a></li>
+<li><a href="#orgd030900">Null simulation</a></li>
+<li><a href="#orge3e3f94">Idealized simulation</a></li>
 <li><a href="#orga8b85e0">Harder simulation</a></li>
 </ul>
 </div>
@@ -275,11 +269,6 @@ for the JavaScript code in this tag.
 <div id="outline-container-org96c4e70" class="outline-2">
 <h2 id="org96c4e70">Proposed model</h2>
 <div class="outline-text-2" id="text-org96c4e70">
-<p>
-Revise the notation, using Latin for the model and Greek for the variational
-approximation.
-</p>
-
 <p>
 \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
 \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
@@ -305,125 +294,54 @@ approximation.
 </div>
 </div>
 
-<div id="outline-container-orgf278122" class="outline-2">
-<h2 id="orgf278122">Variational lower bound</h2>
-<div class="outline-text-2" id="text-orgf278122">
-<p>
-\[ \mathrm{ELBO} = \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] -
-  KL(q(\mathbf{z}) \Vert p(\mathbf{z})) - KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z}))
-  \]
-\[ \mathbb{E}_q[\ln p(\mathbf{y} \mid \mathbf{x}, \mathbf{w})] = -\frac{v}{2} \sum_i
-  \left(y_i - \sum_j x_{ij} \mathbb{E}_q[w_j]\right)^2 - \sum_{i,j} x_{ij}^2 \mathbb{V}_q[w_j] \]
-</p>
-
-<p>
-\[ \mathbb{E}_q[w_j] = \sum_k \pi_{kj} \mu_{kj} \]
-\[ \mathbb{V}_q[w_j] = \sum_k \pi_{kj} \phi_{kj}^{-1} + \pi_{kj} (1 - \pi_{kj}) \mu_{kj}^2 \]
-</p>
-
-<p>
-\[ KL(q(\mathbf{z}) \Vert p(\mathbf{z})) = \sum_k E_q[\ln q(z_k) - \ln p(z_k)] \]
-\[ = \sum_k \left[\sum_j \pi_{kj} \ln \pi_{kj} - \sum_j \pi_{kj} \ln p_{j}\right] \]
-\[ = \sum_{j,k} \pi_{kj} \left( \ln \pi_{kj} - \ln p_{j} \right) \]
-</p>
-
-<p>
-\[ KL(q(\mathbf{b} \mid \mathbf{z}) \Vert p(\mathbf{b} \mid \mathbf{z})) =
-  \frac{1}{2} \sum_{j,k} \pi_{kj} \left(1 + \ln (v v_b) - \ln \phi_{kj} + v v_b (\mu_{kj}^2 + \phi_{kj}^{-1}) \right)\]
-</p>
-</div>
-</div>
-
-<div id="outline-container-orga15f023" class="outline-2">
-<h2 id="orga15f023">Setup</h2>
-<div class="outline-text-2" id="text-orga15f023">
+<div id="outline-container-org1108fc7" class="outline-2">
+<h2 id="org1108fc7">Proposed algorithm</h2>
+<div class="outline-text-2" id="text-org1108fc7">
 <div class="org-src-container">
-<pre class="src src-shell" id="org4f419c6">sbatch --partition=broadwl --mem=16G --time=36:00:00 --job-name=ipython3 --output=ipython3.out
-<span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/bash</span>
-<span class="org-builtin">source</span> activate nwas
-rm -f $<span class="org-variable-name">HOME</span>/.local/share/jupyter/runtime/kernel-aksarkar.json
-ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f kernel-aksarkar.json
-</pre>
-</div>
+<pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">elbo</span>(n, p, d, xr, xrk, y, pip, mean, var, effect_var, residual_var):
+  <span class="org-variable-name">error</span> = np.square(y - xr).<span class="org-builtin">sum</span>()
+  <span class="org-variable-name">error</span> -= np.square(xrk).<span class="org-builtin">sum</span>()
+  <span class="org-comment-delimiter"># </span><span class="org-comment">var doesn't depend on factor?</span>
+  <span class="org-variable-name">error</span> += (d * (pip * (np.square(mean) + var.T)).<span class="org-builtin">sum</span>(axis=0)).<span class="org-builtin">sum</span>()
+  <span class="org-variable-name">error</span> /= residual_var
+  <span class="org-variable-name">error</span> += n * np.log(residual_var)
+  <span class="org-variable-name">error</span> *= -.5
 
-<div class="org-src-container">
-<pre class="src src-ipython" id="org5464a37">%matplotlib inline
-<span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
-<span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
-<span class="org-keyword">import</span> nwas
-<span class="org-keyword">import</span> numpy <span class="org-keyword">as</span> np
-<span class="org-keyword">import</span> pandas <span class="org-keyword">as</span> pd
-<span class="org-keyword">import</span> pyplink
-<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-org4012e94" class="outline-2">
-<h2 id="org4012e94">Simulated data</h2>
-<div class="outline-text-2" id="text-org4012e94">
-<div class="org-src-container">
-<pre class="src src-ipython" id="org665df22"><span class="org-keyword">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span class="org-keyword">as</span> s:
-  <span class="org-variable-name">x</span>, <span class="org-variable-name">y</span> = s.sample_gaussian(n=500)
-  <span class="org-variable-name">x</span> = x.astype(<span class="org-string">'float32'</span>)
-  <span class="org-variable-name">y</span> = y.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-org531465f" class="outline-2">
-<h2 id="org531465f">Coordinate ascent</h2>
-<div class="outline-text-2" id="text-org531465f">
-<p>
-Between the old approximation and this approximation, the only difference is
-\(KL\left(q(z)\Vert p(z)\right)\), but it has similar form. This suggests
-that the same update would work.
-</p>
-
-<p>
-The real problem is that the optimization is now constrained to have \(\pi\)
-on the probability simplex, which isn't captured in the objective function.
-</p>
-
-<p>
-Normalizing \(\pi_k\) after each update does not increase the ELBO.
-</p>
-
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">elbo</span>(x, y, pip, mean, var, effect_var, residual_var):
-  <span class="org-variable-name">n</span>, <span class="org-variable-name">p</span> = x.shape
-  <span class="org-variable-name">genetic_value_mean</span> = np.dot(x, (pip * mean).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
-  <span class="org-variable-name">genetic_value_var</span> = np.dot(np.square(x), (pip * var.T + pip * (1 - pip) * np.square(mean)).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
-  <span class="org-variable-name">llik</span> = -.5 / residual_var * (np.square(y - genetic_value_mean) - genetic_value_var).<span class="org-builtin">sum</span>()
   <span class="org-comment-delimiter"># </span><span class="org-comment">Assume prior probability 1/p for each variant</span>
   <span class="org-variable-name">kl_z</span> = (pip * (np.log(pip) + np.log(p))).<span class="org-builtin">sum</span>()
   <span class="org-variable-name">kl_b</span> = .5 * (pip * (1 + np.log(effect_var * residual_var) - np.log(var.T) + (np.square(mean) + var.T) / (effect_var * residual_var))).<span class="org-builtin">sum</span>()
-  <span class="org-keyword">return</span> llik, kl_z, kl_b
+  <span class="org-keyword">return</span> error, kl_z, kl_b
 
 <span class="org-keyword">def</span> <span class="org-function-name">coordinate_ascent</span>(x, y, effect_var, residual_var, l=5, num_epochs=200):
   <span class="org-variable-name">n</span>, <span class="org-variable-name">p</span> = x.shape
+
+  <span class="org-comment-delimiter"># </span><span class="org-comment">Prior</span>
   <span class="org-variable-name">pi</span> = np.ones((p, 1))
-  <span class="org-variable-name">d</span> = np.einsum(<span class="org-string">'ij,ij-&gt;j'</span>, x, x).reshape(-1, 1)
-  <span class="org-variable-name">xy</span> = x.T.dot(y)
+
+  <span class="org-comment-delimiter"># </span><span class="org-comment">Variational parameters</span>
   <span class="org-variable-name">pip</span> = np.zeros((l, p))
   <span class="org-variable-name">mean</span> = np.zeros((l, p))
   <span class="org-comment-delimiter"># </span><span class="org-comment">Make sure everything is two dimensional to catch numpy broadcasting gotchas</span>
+  <span class="org-variable-name">d</span> = np.einsum(<span class="org-string">'ij,ij-&gt;j'</span>, x, x).reshape(-1, 1)
   <span class="org-variable-name">var</span> = (effect_var * residual_var / (effect_var * d + 1)).reshape(-1, 1)
-  <span class="org-variable-name">eta</span> = np.dot(x, (pip * mean).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
+
+  <span class="org-comment-delimiter"># </span><span class="org-comment">Precompute more things</span>
+  <span class="org-variable-name">xy</span> = x.T.dot(y)
+  <span class="org-variable-name">xr</span> = np.dot(x, (pip * mean).<span class="org-builtin">sum</span>(axis=0, keepdims=<span class="org-constant">True</span>).T)
+
   <span class="org-variable-name">elbo_</span> = <span class="org-constant">None</span>
   <span class="org-variable-name">trace</span> = []
   <span class="org-keyword">for</span> epoch <span class="org-keyword">in</span> <span class="org-builtin">range</span>(num_epochs):
     <span class="org-keyword">for</span> k <span class="org-keyword">in</span> <span class="org-builtin">range</span>(l):
-      <span class="org-variable-name">eta</span> -= np.dot(x, (pip * mean)[k:k + 1].T)
-      <span class="org-variable-name">mean</span>[k:k + 1] = (var / residual_var * (xy - x.T.dot(eta))).T
+      <span class="org-variable-name">xr</span> -= np.dot(x, (pip * mean)[k:k + 1].T)
+      <span class="org-variable-name">mean</span>[k:k + 1] = (var / residual_var * (xy - x.T.dot(xr))).T
       <span class="org-variable-name">pip</span>[k:k + 1] = (pi * np.exp(.5 * (np.log(var / (effect_var * residual_var)) + np.square(mean[k:k + 1].T) / var))).T
       <span class="org-variable-name">pip</span>[k] /= pip[k].<span class="org-builtin">sum</span>()
-      <span class="org-variable-name">eta</span> += np.dot(x, (pip * mean)[k:k + 1].T)
-    <span class="org-variable-name">llik</span>, <span class="org-variable-name">kl_z</span>, <span class="org-variable-name">kl_b</span> = elbo(x, y, pip, mean, var, effect_var, residual_var)
-    <span class="org-variable-name">update</span> = llik - kl_z - kl_b
-    trace.append([update, llik, kl_z, kl_b])
+      <span class="org-variable-name">xr</span> += np.dot(x, (pip * mean)[k:k + 1].T)
+    <span class="org-variable-name">xrk</span> = x.dot((pip * mean).T)
+    <span class="org-variable-name">error</span>, <span class="org-variable-name">kl_z</span>, <span class="org-variable-name">kl_b</span> = elbo(n, p, d, xr, xrk, y, pip, mean, var, effect_var, residual_var)
+    <span class="org-variable-name">update</span> = error - kl_z - kl_b
+    trace.append([update, error, kl_z, kl_b])
     <span class="org-variable-name">elbo_</span> = update
   <span class="org-keyword">return</span> {<span class="org-string">'pip'</span>: pip,
           <span class="org-string">'mean'</span>: pip * mean,
@@ -432,26 +350,6 @@ Normalizing \(\pi_k\) after each update does not increase the ELBO.
           <span class="org-string">'trace'</span>: trace}
 </pre>
 </div>
-
-<div class="org-src-container">
-<pre class="src src-ipython" id="org5c21a5e"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
-pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'llik'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
-</pre>
-</div>
-
-<pre class="example">
-       elbo        llik       kl_z       kl_b
-0 -268.129734 -226.243188  25.352915  16.533631
-1 -268.576104 -226.869986  25.130829  16.575289
-2 -268.640320 -226.956885  25.105590  16.577845
-3 -268.635618 -226.929528  25.125407  16.580682
-4 -268.617950 -226.879634  25.153811  16.584505
-5 -268.593716 -226.816238  25.188131  16.589346
-6 -268.535093 -226.682496  25.255828  16.596769
-7 -268.360134 -226.292446  25.456290  16.611398
-8 -268.081829 -225.462570  25.979514  16.639745
-9 -268.019034 -224.800028  26.550398  16.668607
-</pre>
 
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">plot_categorical_slab_fit</span>(s, opt):
@@ -471,6 +369,33 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
   plt.colorbar(im, ax=ax[2], orientation=<span class="org-string">'horizontal'</span>)
 </pre>
 </div>
+</div>
+</div>
+
+<div id="outline-container-orgd030900" class="outline-2">
+<h2 id="orgd030900">Null simulation</h2>
+<div class="outline-text-2" id="text-orgd030900">
+<div class="org-src-container">
+<pre class="src src-ipython" id="orga626718"><span class="org-variable-name">x</span> = np.random.binomial(2, 0.5, size=(500, 1000))
+<span class="org-variable-name">y</span> = np.random.normal(size=(500, 1))
+<span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=y.var(), l=5, num_epochs=10)
+pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'error'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
+</pre>
+</div>
+
+<pre class="example">
+        elbo        error      kl_z       kl_b
+0 -4256.800943 -4237.421683  0.329539  19.049720
+1 -4235.690940 -4216.320378  0.320814  19.049748
+2 -4228.373109 -4209.004873  0.318495  19.049741
+3 -4221.334778 -4201.968795  0.316248  19.049735
+4 -4214.629746 -4195.265910  0.314107  19.049729
+5 -4208.239606 -4188.877816  0.312067  19.049723
+6 -4202.147187 -4182.787349  0.310121  19.049718
+7 -4196.336301 -4176.978323  0.308265  19.049713
+8 -4190.791683 -4171.435481  0.306494  19.049708
+9 -4185.498939 -4166.144433  0.304803  19.049703
+</pre>
 
 <div class="org-src-container">
 <pre class="src src-ipython">plot_categorical_slab_fit(s, opt)
@@ -479,23 +404,136 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 
 
 <div class="figure">
-<p><img src="coordinate-ascent-opt.png" alt="coordinate-ascent-opt.png" />
+<p><img src="null-coordinate-ascent-opt.png" alt="null-coordinate-ascent-opt.png">
 </p>
 </div>
+</div>
+</div>
+
+<div id="outline-container-orge3e3f94" class="outline-2">
+<h2 id="orge3e3f94">Idealized simulation</h2>
+<div class="outline-text-2" id="text-orge3e3f94">
+<p>
+Simulate from a linear model:
+</p>
 
 <p>
-<b>TODO:</b> why is the log likelihood decreasing in the second round of updates?
+\[ f_j \sim U(0.01, 0.5) \]
+\[ x_{ij} \sim Binomial(2, f_j) \]
+\[ \beta_j \mid z_j \sim N(0, 1) \]
+\[ y \sim N(X \beta, \frac{1}{h^2}\left(V[X\beta] - 1 \right)) \]
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, l=5, effect_var=1, residual_var=s.residual_var, num_epochs=1)
-plot_categorical_slab_fit(s, opt)
+<pre class="src src-ipython" id="org665df22"><span class="org-keyword">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span class="org-keyword">as</span> s:
+  <span class="org-variable-name">x</span>, <span class="org-variable-name">y</span> = s.sample_gaussian(n=500)
+  <span class="org-variable-name">x</span> = x.astype(<span class="org-string">'float32'</span>)
+  <span class="org-variable-name">y</span> = y.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
+</pre>
+</div>
+
+<p>
+Fix the residual variance to the true value used in the simulation.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython" id="org10dc663"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
+pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'error'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
+</pre>
+</div>
+
+<pre class="example">
+          elbo          error       kl_z       kl_b
+0 -221817.516715 -221775.630169  25.352916  16.533631
+1 -228254.989057 -228213.282939  25.130829  16.575289
+2 -228515.970511 -228474.287076  25.105591  16.577845
+3 -228456.315742 -228414.609651  25.125409  16.580682
+4 -228396.411357 -228354.673039  25.153813  16.584505
+5 -228336.132212 -228294.354731  25.188135  16.589346
+6 -228293.771055 -228251.918451  25.255835  16.596769
+7 -228360.679959 -228318.612251  25.456309  16.611399
+8 -228784.313766 -228741.694470  25.979550  16.639746
+9 -229490.503252 -229447.284226  26.550417  16.668608
+</pre>
+
+<div class="org-src-container">
+<pre class="src src-ipython">plot_categorical_slab_fit(s, opt)
 </pre>
 </div>
 
 
 <div class="figure">
-<p><img src="coordinate-ascent-1-iter.png" alt="coordinate-ascent-1-iter.png" />
+<p><img src="coordinate-ascent-opt.png" alt="coordinate-ascent-opt.png">
+</p>
+</div>
+
+<p>
+Try restricting to a single factor.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=1, num_epochs=10)
+pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'error'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
+</pre>
+</div>
+
+<pre class="example">
+          elbo          error      kl_z      kl_b
+0 -100870.914631 -100860.191834  6.907755  3.815042
+1 -100870.914631 -100860.191834  6.907755  3.815042
+2 -100870.914631 -100860.191834  6.907755  3.815042
+3 -100870.914631 -100860.191834  6.907755  3.815042
+4 -100870.914631 -100860.191834  6.907755  3.815042
+5 -100870.914631 -100860.191834  6.907755  3.815042
+6 -100870.914631 -100860.191834  6.907755  3.815042
+7 -100870.914631 -100860.191834  6.907755  3.815042
+8 -100870.914631 -100860.191834  6.907755  3.815042
+9 -100870.914631 -100860.191834  6.907755  3.815042
+</pre>
+
+<div class="org-src-container">
+<pre class="src src-ipython">plot_categorical_slab_fit(s, opt)
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="coordinate-ascent-opt-1.png" alt="coordinate-ascent-opt-1.png">
+</p>
+</div>
+
+<p>
+Add factors one at a time
+</p>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=2, num_epochs=10)
+pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'error'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
+</pre>
+</div>
+
+<pre class="example">
+          elbo          error       kl_z      kl_b
+0 -182282.947936 -182261.799655  13.815511  7.332770
+1 -188764.718437 -188743.531604  13.815511  7.371323
+2 -188775.749384 -188754.562485  13.815511  7.371388
+3 -188775.767889 -188754.580990  13.815511  7.371388
+4 -188775.767920 -188754.581021  13.815511  7.371388
+5 -188775.767920 -188754.581021  13.815511  7.371388
+6 -188775.767920 -188754.581021  13.815511  7.371388
+7 -188775.767920 -188754.581021  13.815511  7.371388
+8 -188775.767920 -188754.581021  13.815511  7.371388
+9 -188775.767920 -188754.581021  13.815511  7.371388
+</pre>
+
+<div class="org-src-container">
+<pre class="src src-ipython">plot_categorical_slab_fit(s, opt)
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="coordinate-ascent-opt-2.png" alt="coordinate-ascent-opt-2.png">
 </p>
 </div>
 </div>
@@ -541,7 +579,7 @@ plot_ld(x)
 
 
 <div class="figure">
-<p><img src="ld.png" alt="ld.png" />
+<p><img src="ld.png" alt="ld.png">
 </p>
 </div>
 
@@ -587,15 +625,15 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 
 
 <div class="figure">
-<p><img src="categorical-slab-geuvadis.png" alt="categorical-slab-geuvadis.png" />
+<p><img src="categorical-slab-geuvadis.png" alt="categorical-slab-geuvadis.png">
 </p>
 </div>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
-<p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-06 Mon 20:28</p>
+<p class="author">Author: Abhishek Sarkar Abhishek Sarkar</p>
+<p class="date">Created: 2017-11-14 Tue 22:56</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
