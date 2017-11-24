@@ -1,0 +1,152 @@
+#+TITLE: Roadmap for fine-mapping paper
+#+SETUPFILE: setup.org
+
+* Motivation
+
+  The main challenge in estimating posterior inclusion probabilities for
+  variables in sparse Bayesian regression is marginalizing over all possible
+  configurations of variables. 
+
+  Prior work addressed this challenge by using a variational approximation
+  which avoids marginalization. However, the main limitation of this approach
+  is that it does not accurately estimate PIP when variables are correlated to
+  each other.
+
+* What is the contribution?
+
+** The application
+
+   The goal of statistical fine mapping is to produce a /credible set/, a set
+   of variants which contains the causal variants with high posterior
+   probability.
+
+   Why did we need credible sets in the first place? In fine-mapping GWAS, we
+   need to prioritize variants for experimental followup. Naturally then, the
+   main metric for innovations in this problem are reducing the size of
+   credible sets. If the main advance of the approach is to get the same PIP,
+   but quicker, then we haven't made an advance on this matric.
+
+   The main barrier to experimentally validating more non-coding loci is not
+   making the credible set smaller. We are now at the point where credible sets
+   are already single variants ([[https://www.nature.com/articles/nature22969][Huang et al 2015]]).
+   
+   The main barrier is getting the causal gene and the causal tissue in each
+   locus. We have a handful of experimentally validated non-coding causal
+   variants in GWAS loci:
+
+   - ~rs12740374~ creates a C/EBP binding site, alters expression of /SORT1/,
+     which alters hepatic secretion of LDL ([[https://www.nature.com/articles/nature09266][Musunru et al 2010]])
+   - ~rs6795970~ disrupts TBX3 binding, alters expression of /SCN5A/ and
+     /SCN10A/, which alters QRS duration ([[https://www.jci.org/articles/view/62613][van den Boogaard et al 2012]],
+     [[https://www.jci.org/articles/view/62617][Arnolds et al 2012]])
+   - ~rs1421085~ disrupts ARID5B binding, alters expression of /IRX3/ and
+     /IRX5/, altering adipocyte differentiation ([[http://www.nejm.org/doi/full/10.1056/NEJMoa1502214#t=article][Claussnitzer et al 2015]])
+   - ~rs1743292~ and ~rs1772203~ alter DNaseI hypersensitivity (based on
+     allelic imbalance of DHS reads), altering expression of BVES, which
+     alters QT interval duration ([[https://elifesciences.org/articles/10557][Wang et al 2016]])
+
+   Some observations about this list:
+
+   - GTEx sample sizes are too small, or GTEx is missing the tissue in each of
+     these loci
+   - At the end of the day, they recovered a single causal variant
+
+   The obvious thing to do is to fine map every gene in every tissue in GTEx.
+   [[https://www.biorxiv.org/content/early/2017/10/15/203380][This has already been done using CAVIAR]].
+
+   If the main advance of our approach is to be able to quickly fit models
+   without assuming some small number of causal variants (like CAVIAR), it's
+   unclear how relevant this is, because we have yet to find an instance of
+   multiple causal variants in a locus.
+
+   The most obvious limitation of this approach which needs to be addressed is
+   not computational cost (just put it on a bigger computer). Rather, we need
+   to address the model itself, looking more than 1 MB away from the gene,
+   allowing regulatory SNPs to "skip over" genes, and using more information
+   than just genetic variation. Yongjin Park and I [[https://www.biorxiv.org/content/early/2017/11/18/219428][developed a method]]
+   incorporating some of these ideas.
+
+   But, we can now simply experimentally observe the causal regulatory elements
+   for gene expression:
+
+   *Sharpr-MPRA ([[https://www.nature.com/articles/nbt.3678][Ernst et al 2016]])*. Take 295 bp around 14,000 regulatory
+   elements, synthesize luciferase reporters for overlapping 145 bp tiles,
+   infer the causal nucleotide (to within 5 bp) using a Gaussian graphical
+   model
+
+   *CRISPRi ([[http://science.sciencemag.org/content/354/6313/769.long][Fulco et al 2016]])*. Use KRAB-dCas9 to alter chromatin state,
+   targetting every base pair in >1 MB around GATA1 and MYC, directly observe
+   the causal nucleotides
+
+   *ScanDel ([[http://www.cell.com/ajhg/fulltext/S0002-9297(17)30245-8][Gasperini et al 2017]])*. Use CRISPR to systematically delete every
+   1-2 kb window in 206 kb around HPRT1
+
+   *HiDRA ([[https://www.biorxiv.org/content/early/2017/09/27/193136][Wang et al 2017]])*. Use ATAC-Seq to enrich for reads from regulatory
+   elements, perform STARR-Seq to test their function, modify the SHARPR
+   algorithm to infer causal nucleotides
+
+   So, the interesting problem that needs to be solved is not calibrating PIPs
+   for cis-eQTLs in GTEx, but finding new creative ways to interrogate
+   transcriptional regulation.
+
+** The prior
+
+   Yongjin Park and I have an inference engine to build arbitrarily complicated
+   models using spike-and-slab prior (SSB). But the challenge is that we have
+   to be frequentist with respect to the PIP, because the method overstates
+   confidence in the selected variables.
+
+   In simulation, we treat the variable selection problem as a prediction
+   problem and use typical machine learning metrics (precision-recall) to
+   characterize the performance. We find that typically the method
+   outperforms regularized regression on these metrics.
+
+   However, taking this approach means we can't interpret the PIPs (because
+   they're always 0 or 1). In real data analysis, we instead bootstrap/permute
+   to get frequentist p-values and local FDR. In essence, we simply drop in
+   spike-and-slab regression where we would have used regularized regression
+   before.
+
+   The main challenge in using the method on bigger models is getting
+   statistically sound claims from the the fitted models. If we had a prior and
+   matching variational approximation that got the PIP correct, then I would
+   like a component which could simply be used in automatic inference place of
+   SSB. Then, we would immediately get calibrated PIPs for arbitrarily
+   complicated models and could simply use the estimates instead of permutation
+   testing.
+
+   Along these lines, the way to make a novel prior most useful to
+   practitioners would be to build it into a probabilistic programming
+   language.
+
+   The fact that this is not immediately trivial to do is interesting and
+   important. We already know how to use Categorical random variables in
+   automatic inference (the [[https://arxiv.org/abs/1611.00712][Concrete relaxation]], and the [[https://arxiv.org/abs/1611.01144][Gumbel-Softmax
+   distribution]]). However, simply plugging these in doesn't work.
+
+   Similarly, in our inference engine we just have to be able to characterize
+   the mean and variance of \(X \beta\). In our preliminary experiments, this
+   doesn't work, because the variational parameters \(\alpha\) have to
+   constrainted to the probability simplex. In principle, we should be able to
+   use the softmax basis ([[https://link.springer.com/article/10.1023/A:1007558615313][Mackay 1998]]) to turn this into an unconstrained
+   problem, giving us automatic inference not only for this prior, but also for
+   the ~ash~ prior.
+
+** The algorithm
+
+   The key idea of the [[https://stephens999.github.io/misc/newVB.ss.html][proposed approach]] is that solving the problem assuming a
+   single non-zero coefficient is easy (update the variational parameters using
+   the single SNP Bayes factor). Assuming that coefficients are conditionally
+   independent given the genotypes and phenotype, this means we can simply
+   update single effects round-robin.
+
+   How large is the class of models for which this approach generalizes?
+
+* Comparison to existing methods
+
+  - [[http://www.genetics.org/content/early/2014/08/06/genetics.114.167908.full.pdf+html][CAVIAR]] (2014)
+  - [[http://www.genetics.org/content/200/3/719.long][CAVIARBF]] (2015)
+  - [[http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004722][PAINTOR]] (2015)
+  - [[https://academic.oup.com/bioinformatics/article-lookup/doi/10.1093/bioinformatics/btw018][FINEMAP]] (2016)
+  - [[https://academic.oup.com/nar/article/44/18/e144/2468351][RiVIERA]] (2016)
+  - [[http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004787][GPA]] (2016)
