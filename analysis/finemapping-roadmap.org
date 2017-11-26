@@ -13,7 +13,6 @@
   each other.
 
 * What is the contribution?
-
 ** The application
 
    The goal of statistical fine mapping is to produce a /credible set/, a set
@@ -125,8 +124,8 @@
    distribution]]). However, simply plugging these in doesn't work.
 
    Similarly, in our inference engine we just have to be able to characterize
-   the mean and variance of \(X \beta\). In our preliminary experiments, this
-   doesn't work, because the variational parameters \(\alpha\) have to
+   the mean and variance of $X\beta$. In our preliminary experiments, this
+   doesn't work, because the variational parameters $\alpha$ have to
    constrainted to the probability simplex. In principle, we should be able to
    use the softmax basis ([[https://link.springer.com/article/10.1023/A:1007558615313][Mackay 1998]]) to turn this into an unconstrained
    problem, giving us automatic inference not only for this prior, but also for
@@ -146,6 +145,7 @@
 
   - [[http://www.genetics.org/content/early/2014/08/06/genetics.114.167908.full.pdf+html][CAVIAR]] (2014)
   - [[http://www.genetics.org/content/200/3/719.long][CAVIARBF]] (2015)
+  - [[https://www.nature.com/articles/ncomms9555][eQTeL]] (2015)
   - [[http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004722][PAINTOR]] (2015)
   - [[https://academic.oup.com/bioinformatics/article-lookup/doi/10.1093/bioinformatics/btw018][FINEMAP]] (2016)
   - [[https://academic.oup.com/nar/article/44/18/e144/2468351][RiVIERA]] (2016)
