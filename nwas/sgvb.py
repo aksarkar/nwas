@@ -10,7 +10,8 @@ def normal_llik(y, mean, prec):
   return -.5 * (-tf.log(prec) + tf.square(y - mean) * prec)
 
 def normal_sample(mean, prec, n=1):
-  return mean + tf.random_normal([n, 1]) * tf.sqrt(tf.reciprocal(prec))
+  samples = tf.random_normal([n]) * tf.ones(tf.shape(mean))
+  return mean + samples * tf.sqrt(tf.reciprocal(prec))
 
 def kl_normal_normal(mean_a, prec_a, mean_b, prec_b, reduce=True):
   """Rasmussen & Williams eq. A.23 for univariate Gaussians"""
@@ -86,10 +87,10 @@ def gaussian_spike_slab(x, y, stoch_samples=10, **kwargs):
     odds = sigmoid(normal_sample(logodds_mean, logodds_prec, stoch_samples))
     effect_prec = tf.exp(normal_sample(effect_prec_mean, effect_prec_prec, stoch_samples))
 
-    error = tf.reduce_mean(tf.reduce_sum(normal_llik(y_ph, eta, resid_prec), axis=0))
+    error = tf.reduce_mean(tf.reduce_sum(normal_llik(y_ph, eta, resid_prec), axis=1))
     kl = [
-      tf.reduce_mean(tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds), axis=0)),
-      tf.reduce_mean(tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec), axis=0)),
+      tf.reduce_mean(tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds), axis=1)),
+      tf.reduce_mean(tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec), axis=1)),
       tf.reduce_sum(kl_normal_normal(logodds_mean, logodds_prec, tf.constant(0.), tf.constant(1.))),
       tf.reduce_sum(kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))),
     ]
@@ -121,7 +122,6 @@ def kl_categorical_categorical(logits_p, logits_q):
   return tf.nn.sigmoid(logits_p) * (tf.nn.softplus(-logits_q) - tf.nn.softplus(-logits_p))
 
 def categorical_slab_cov(probs, mean, prec):
-  probs /= tf.reduce_sum(probs, axis=1, keep_dims=True)
   if probs.shape[0] == 1:
     cov = tf.zeros([probs.shape[1], probs.shape[1]])
   else:
@@ -149,7 +149,7 @@ def gaussian_categorical_slab(x, y, l, stoch_samples=10, **kwargs):
       v_b_prec = biased_softplus(tf.get_variable('v_b_prec', [1]))
     with tf.variable_scope('params', initializer=tf.random_normal_initializer):
       logit_pi = tf.get_variable('pi', [l, p])
-      pi = sigmoid(logit_pi)
+      pi = tf.nn.softmax(logit_pi)
       mu = tf.get_variable('mu', [l, p])
       phi = biased_softplus(tf.get_variable('phi', [l, p]))
 
