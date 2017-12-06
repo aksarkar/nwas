@@ -1,0 +1,113 @@
+#+TITLE: Hierarchical model in Edward
+#+SETUPFILE: setup.org
+
+* Setup
+
+  #+BEGIN_SRC emacs-lisp :exports none
+    (org-babel-lob-ingest "/home/aksarkar/.emacs.d/org-templates/library.org")
+  #+END_SRC
+
+  #+RESULTS:
+  : 1
+
+  #+CALL: ipython3(venv="nwas", partition="gpu2") :exports none
+
+  #+RESULTS:
+  : Submitted batch job 40947878
+
+  #+BEGIN_SRC ipython
+    import edward as ed
+    from edward.models import Normal
+    import numpy as np
+    import tensorflow as tf
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Data
+
+  #+BEGIN_SRC ipython
+    N = 3  # number of groups
+    M = 1000  # samples per group
+
+    # mean for each group is different
+    # want to infer the group means plus the overall mean
+    actual_group_means = [0.1, 0.2, 0.3]
+    sigma = 0.1
+
+    observed_groups = np.repeat([0, 1, 2], M)
+    samples = [np.random.normal(actual_group_means[g], sigma, M) for g in range(N)]
+    observed_data = np.concatenate(samples)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Model
+
+  #+BEGIN_SRC ipython
+    groups = tf.placeholder(tf.int32, [M * N])
+
+    overall_mean = Normal(
+      loc=tf.zeros(1), 
+      scale=tf.ones(1) * 0.05
+    )
+    q_overall_mean = Normal(
+      loc=tf.Variable(tf.zeros(1)),
+      scale=tf.nn.softplus(tf.Variable(tf.zeros(1)))
+    )
+
+    group_means = Normal(
+      loc=tf.ones(N) * overall_mean,
+      scale=tf.ones(N) * 0.05
+    )
+    q_group_means = Normal(
+      loc=tf.Variable(tf.zeros(N)),
+      scale=tf.nn.softplus(tf.Variable(tf.zeros(N)))
+    )
+
+    data = Normal(
+      loc=tf.gather(group_means, groups),
+      scale=tf.ones(shape=[N * M]) * sigma
+    )
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Inference
+
+  #+BEGIN_SRC ipython :results output :exports both
+    for inference_alg in (ed.ReparameterizationKLqp, ed.ReparameterizationKLKLqp):
+      inference = inference_alg(
+        {
+          overall_mean: q_overall_mean,
+          group_means: q_group_means
+        },
+        data={
+          groups: observed_groups,
+          data: observed_data
+        }
+      )
+      inference.run(n_samples=5, n_iter=1000)
+      sess = ed.get_session()
+      print('Using {}:'.format(inference_alg))
+      print(q_overall_mean.mean().eval())
+      print(q_group_means.mean().eval())
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  #+BEGIN_EXAMPLE
+  Using <class 'edward.inferences.klqp.ReparameterizationKLqp'>:
+  [ 0.15242636]
+  [ 0.08973102  0.20209159  0.30212268]
+  Using <class 'edward.inferences.klqp.ReparameterizationKLKLqp'>:
+  [ 0.]
+  [ 0.07926108  0.18680389  0.30515084]
+  #+END_EXAMPLE
+  :END:
