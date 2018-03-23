@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-25 Sat 12:07 -->
+<!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fine mapping idea</title>
@@ -257,18 +257,18 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org96c4e70">Proposed model</a></li>
-<li><a href="#org1108fc7">Proposed algorithm</a></li>
-<li><a href="#orgd030900">Null simulation</a></li>
-<li><a href="#orge3e3f94">Idealized simulation</a></li>
-<li><a href="#orga8b85e0">Harder simulation</a></li>
+<li><a href="#orgd815fd8">Proposed model</a></li>
+<li><a href="#org7b15899">Proposed algorithm</a></li>
+<li><a href="#org7abd804">Null simulation</a></li>
+<li><a href="#org5e45375">Idealized simulation</a></li>
+<li><a href="#org921ab38">Harder simulation</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org96c4e70" class="outline-2">
-<h2 id="org96c4e70">Proposed model</h2>
-<div class="outline-text-2" id="text-org96c4e70">
+<div id="outline-container-orgd815fd8" class="outline-2">
+<h2 id="orgd815fd8">Proposed model</h2>
+<div class="outline-text-2" id="text-orgd815fd8">
 <p>
 \[ p(\mathbf{y} \mid \mathbf{x}, \mathbf{w}) = N(\mathbf{y}; \mathbf{x} \mathbf{w}', v^{-1} \mathbf{I}) \]
 \[ \mathbf{w} = \sum_k z_{kj} b_{kj} \]
@@ -294,9 +294,9 @@ for the JavaScript code in this tag.
 </div>
 </div>
 
-<div id="outline-container-org1108fc7" class="outline-2">
-<h2 id="org1108fc7">Proposed algorithm</h2>
-<div class="outline-text-2" id="text-org1108fc7">
+<div id="outline-container-org7b15899" class="outline-2">
+<h2 id="org7b15899">Proposed algorithm</h2>
+<div class="outline-text-2" id="text-org7b15899">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">def</span> <span class="org-function-name">elbo</span>(n, p, d, xr, xrk, y, pip, mean, var, effect_var, residual_var):
   <span class="org-variable-name">error</span> = np.square(y - xr).<span class="org-builtin">sum</span>()
@@ -372,11 +372,11 @@ for the JavaScript code in this tag.
 </div>
 </div>
 
-<div id="outline-container-orgd030900" class="outline-2">
-<h2 id="orgd030900">Null simulation</h2>
-<div class="outline-text-2" id="text-orgd030900">
+<div id="outline-container-org7abd804" class="outline-2">
+<h2 id="org7abd804">Null simulation</h2>
+<div class="outline-text-2" id="text-org7abd804">
 <div class="org-src-container">
-<pre class="src src-ipython" id="orga626718"><span class="org-variable-name">x</span> = np.random.binomial(2, 0.5, size=(500, 1000))
+<pre class="src src-ipython" id="org7b1e0ad"><span class="org-variable-name">x</span> = np.random.binomial(2, 0.5, size=(500, 1000))
 <span class="org-variable-name">y</span> = np.random.normal(size=(500, 1))
 <span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=y.var(), l=5, num_epochs=10)
 pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'error'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
@@ -410,9 +410,9 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 </div>
 </div>
 
-<div id="outline-container-orge3e3f94" class="outline-2">
-<h2 id="orge3e3f94">Idealized simulation</h2>
-<div class="outline-text-2" id="text-orge3e3f94">
+<div id="outline-container-org5e45375" class="outline-2">
+<h2 id="org5e45375">Idealized simulation</h2>
+<div class="outline-text-2" id="text-org5e45375">
 <p>
 Simulate from a linear model:
 </p>
@@ -425,7 +425,7 @@ Simulate from a linear model:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ipython" id="org665df22"><span class="org-keyword">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span class="org-keyword">as</span> s:
+<pre class="src src-ipython" id="orgaa22d67"><span class="org-keyword">with</span> nwas.simulation.simulation(p=1000, pve=0.5, annotation_params=[(10, 1)], seed=0) <span class="org-keyword">as</span> s:
   <span class="org-variable-name">x</span>, <span class="org-variable-name">y</span> = s.sample_gaussian(n=500)
   <span class="org-variable-name">x</span> = x.astype(<span class="org-string">'float32'</span>)
   <span class="org-variable-name">y</span> = y.reshape(-1, 1).astype(<span class="org-string">'float32'</span>)
@@ -437,7 +437,7 @@ Fix the residual variance to the true value used in the simulation.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-ipython" id="org10dc663"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
+<pre class="src src-ipython" id="org16a1f1c"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
 pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'error'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
 </pre>
 </div>
@@ -539,20 +539,20 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 </div>
 </div>
 
-<div id="outline-container-orga8b85e0" class="outline-2">
-<h2 id="orga8b85e0">Harder simulation</h2>
-<div class="outline-text-2" id="text-orga8b85e0">
+<div id="outline-container-org921ab38" class="outline-2">
+<h2 id="org921ab38">Harder simulation</h2>
+<div class="outline-text-2" id="text-org921ab38">
 <p>
 Use real LD from <a href="http://www.geuvadis.org/web/geuvadis/rnaseq-project">GEUVADIS genotypes</a>.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-shell" id="orgcb707f6">srun --partition=broadwl --mem=8G plink --memory 8000 --vcf /project/compbio/geuvadis/genotypes/GEUVADIS.chr1.PH1PH2_465.IMPFRQFILT_BIALLELIC_PH.annotv2.genotypes.vcf.gz --make-bed --out 1
+<pre class="src src-shell" id="org086eed2">srun --partition=broadwl --mem=8G plink --memory 8000 --vcf /project/compbio/geuvadis/genotypes/GEUVADIS.chr1.PH1PH2_465.IMPFRQFILT_BIALLELIC_PH.annotv2.genotypes.vcf.gz --make-bed --out 1
 </pre>
 </div>
 
 <div class="org-src-container">
-<pre class="src src-ipython" id="orgc95a5b1"><span class="org-variable-name">geuvadis_chr1</span> = pyplink.PyPlink(os.path.join(os.getenv(<span class="org-string">'SCRATCH'</span>), <span class="org-string">'spikeslab'</span>, <span class="org-string">'1'</span>))
+<pre class="src src-ipython" id="orge3533b1"><span class="org-variable-name">geuvadis_chr1</span> = pyplink.PyPlink(os.path.join(os.getenv(<span class="org-string">'SCRATCH'</span>), <span class="org-string">'spikeslab'</span>, <span class="org-string">'1'</span>))
 <span class="org-variable-name">x</span> = np.zeros((geuvadis_chr1.get_nb_samples(), s.p), dtype=np.float32)
 <span class="org-keyword">for</span> i, (_, geno) <span class="org-keyword">in</span> <span class="org-builtin">enumerate</span>(geuvadis_chr1):
   <span class="org-keyword">if</span> i &gt;= x.shape[1]:
@@ -563,7 +563,7 @@ Use real LD from <a href="http://www.geuvadis.org/web/geuvadis/rnaseq-project">G
 </div>
 
 <div class="org-src-container">
-<pre class="src src-ipython" id="org0756927"><span class="org-keyword">def</span> <span class="org-function-name">plot_ld</span>(x):
+<pre class="src src-ipython" id="org9496bb0"><span class="org-keyword">def</span> <span class="org-function-name">plot_ld</span>(x):
   <span class="org-variable-name">w</span> = x - x.mean(axis=0)
   <span class="org-variable-name">w</span> /= 1e-8 + w.std(axis=0)
   <span class="org-variable-name">corr</span> = w.T.dot(w) / w.shape[0]
@@ -599,7 +599,7 @@ s.sample_effects(pve=0.5, annotation_params=[(0, 1), (2, 1)], permute=<span clas
 </div>
 
 <div class="org-src-container">
-<pre class="src src-ipython" id="org63d5ba9"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
+<pre class="src src-ipython" id="org18ef371"><span class="org-variable-name">opt</span> = coordinate_ascent(x, y, effect_var=1, residual_var=s.residual_var, l=5, num_epochs=10)
 pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class="org-string">'elbo'</span>, <span class="org-string">'llik'</span>, <span class="org-string">'kl_z'</span>, <span class="org-string">'kl_b'</span>])
 </pre>
 </div>
@@ -633,7 +633,7 @@ pd.DataFrame(opt[<span class="org-string">'trace'</span>], columns=[<span class=
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-25 Sat 12:07</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

@@ -1,6 +1,8 @@
 #+TITLE: NWAS
-#+SETUPFILE: /home/aksarkar/.emacs.d/org-templates/setup-hotlink.org
+#+SETUPFILE: setup.org
 
+- [[file:non-centered.org][Non-centered parameterization of point-normal prior]]
+- [[file:klqp.org][Hierarchical model in Edward]]
 - [[file:prior.org][Analytical derivations for non-exchangeable prior]]
 - [[file:finemap.org][Fine mapping idea]]
 - [[file:example.org][Linear regression with spike and slab prior]]

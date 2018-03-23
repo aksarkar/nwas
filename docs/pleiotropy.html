@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-25 Sat 12:07 -->
+<!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Modeling pleiotropic effects</title>
@@ -257,20 +257,20 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orga5c4a11">Introduction</a></li>
-<li><a href="#org41b2703">Simulation setup</a></li>
-<li><a href="#org7c48376">Joint model</a></li>
-<li><a href="#org466ed8d">Variational approximation</a></li>
-<li><a href="#org590d3ea">Model fitting</a></li>
-<li><a href="#org1486a27">Model evaluation</a></li>
-<li><a href="#orgf590331">Limitations</a></li>
+<li><a href="#org3025c9c">Introduction</a></li>
+<li><a href="#orgc64e3c7">Simulation setup</a></li>
+<li><a href="#orgdbf822a">Joint model</a></li>
+<li><a href="#org5022d37">Variational approximation</a></li>
+<li><a href="#org3b3edf0">Model fitting</a></li>
+<li><a href="#org4abe25a">Model evaluation</a></li>
+<li><a href="#org2d6e368">Limitations</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-orga5c4a11" class="outline-2">
-<h2 id="orga5c4a11">Introduction</h2>
-<div class="outline-text-2" id="text-orga5c4a11">
+<div id="outline-container-org3025c9c" class="outline-2">
+<h2 id="org3025c9c">Introduction</h2>
+<div class="outline-text-2" id="text-org3025c9c">
 <p>
 Suppose we generated data from both mediated and unmediated effects:
 </p>
@@ -305,9 +305,9 @@ genome?
 </div>
 </div>
 
-<div id="outline-container-org41b2703" class="outline-2">
-<h2 id="org41b2703">Simulation setup</h2>
-<div class="outline-text-2" id="text-org41b2703">
+<div id="outline-container-orgc64e3c7" class="outline-2">
+<h2 id="orgc64e3c7">Simulation setup</h2>
+<div class="outline-text-2" id="text-orgc64e3c7">
 <ul class="org-ul">
 <li>Generate random genotypes in linkage equilibrium</li>
 
@@ -359,9 +359,9 @@ to get the desired PVE.</li>
 </div>
 </div>
 
-<div id="outline-container-org7c48376" class="outline-2">
-<h2 id="org7c48376">Joint model</h2>
-<div class="outline-text-2" id="text-org7c48376">
+<div id="outline-container-orgdbf822a" class="outline-2">
+<h2 id="orgdbf822a">Joint model</h2>
+<div class="outline-text-2" id="text-orgdbf822a">
 <div class="org-src-container">
 <pre class="src src-ipython">ed.set_seed(0)
 
@@ -396,9 +396,9 @@ to get the desired PVE.</li>
 </div>
 </div>
 
-<div id="outline-container-org466ed8d" class="outline-2">
-<h2 id="org466ed8d">Variational approximation</h2>
-<div class="outline-text-2" id="text-org466ed8d">
+<div id="outline-container-org5022d37" class="outline-2">
+<h2 id="org5022d37">Variational approximation</h2>
+<div class="outline-text-2" id="text-org5022d37">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
@@ -481,9 +481,9 @@ simply apply the above result to get:
 </div>
 </div>
 
-<div id="outline-container-org590d3ea" class="outline-2">
-<h2 id="org590d3ea">Model fitting</h2>
-<div class="outline-text-2" id="text-org590d3ea">
+<div id="outline-container-org3b3edf0" class="outline-2">
+<h2 id="org3b3edf0">Model fitting</h2>
+<div class="outline-text-2" id="text-org3b3edf0">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
     latent_vars={
@@ -510,9 +510,9 @@ inference.run(n_iter=2000, optimizer=<span class="org-string">'rmsprop'</span>)
 </div>
 </div>
 </div>
-<div id="outline-container-org1486a27" class="outline-2">
-<h2 id="org1486a27">Model evaluation</h2>
-<div class="outline-text-2" id="text-org1486a27">
+<div id="outline-container-org4abe25a" class="outline-2">
+<h2 id="org4abe25a">Model evaluation</h2>
+<div class="outline-text-2" id="text-org4abe25a">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">import</span> matplotlib.gridspec
 <span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
@@ -565,9 +565,9 @@ plt.close()
 </p>
 </div>
 </div>
-<div id="outline-container-orgf590331" class="outline-2">
-<h2 id="orgf590331">Limitations</h2>
-<div class="outline-text-2" id="text-orgf590331">
+<div id="outline-container-org2d6e368" class="outline-2">
+<h2 id="org2d6e368">Limitations</h2>
+<div class="outline-text-2" id="text-org2d6e368">
 <p>
 \(u\) correlated with \(v\) is the well studied pleiotropy problem
 in Mendelian randomization.
@@ -638,7 +638,7 @@ Edward.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-25 Sat 12:07</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

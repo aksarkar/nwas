@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-25 Sat 12:07 -->
+<!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spike-and-slab regression in tensorflow</title>
@@ -235,16 +235,16 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org29ff1c6">Setup</a></li>
-<li><a href="#org07e980b">Simulate some data</a></li>
-<li><a href="#org8c6378e">Fit the model</a></li>
+<li><a href="#orgb4919d2">Setup</a></li>
+<li><a href="#org13b6c88">Simulate some data</a></li>
+<li><a href="#orgca0d74b">Fit the model</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org29ff1c6" class="outline-2">
-<h2 id="org29ff1c6">Setup</h2>
-<div class="outline-text-2" id="text-org29ff1c6">
+<div id="outline-container-orgb4919d2" class="outline-2">
+<h2 id="orgb4919d2">Setup</h2>
+<div class="outline-text-2" id="text-orgb4919d2">
 <div class="org-src-container">
 <pre class="src src-shell">mkdir -p $<span class="org-variable-name">SCRATCH</span>/nwas
 </pre>
@@ -271,9 +271,9 @@ ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f k
 </div>
 </div>
 
-<div id="outline-container-org07e980b" class="outline-2">
-<h2 id="org07e980b">Simulate some data</h2>
-<div class="outline-text-2" id="text-org07e980b">
+<div id="outline-container-org13b6c88" class="outline-2">
+<h2 id="org13b6c88">Simulate some data</h2>
+<div class="outline-text-2" id="text-org13b6c88">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">p</span> = 1000
 <span class="org-variable-name">n_train</span> = 500
@@ -292,9 +292,9 @@ ipython3 kernel --ip=$(<span class="org-sh-quoted-exec">hostname</span> -i) -f k
 </div>
 </div>
 
-<div id="outline-container-org8c6378e" class="outline-2">
-<h2 id="org8c6378e">Fit the model</h2>
-<div class="outline-text-2" id="text-org8c6378e">
+<div id="outline-container-orgca0d74b" class="outline-2">
+<h2 id="orgca0d74b">Fit the model</h2>
+<div class="outline-text-2" id="text-orgca0d74b">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">opt</span> = nwas.sgvb.gaussian_spike_slab(x_train, y_train, verbose=<span class="org-constant">True</span>, num_epochs=2000)
 </pre>
@@ -365,7 +365,7 @@ ax[2].set_xlabel(<span class="org-string">'True and false positive variants'</sp
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-25 Sat 12:07</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

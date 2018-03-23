@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-25 Sat 12:07 -->
+<!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Proposed model</title>
@@ -257,20 +257,20 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org933b906">Simulation setup</a></li>
-<li><a href="#org43e3e01">Ordinary TWAS</a></li>
-<li><a href="#org1f182d9">Joint model</a></li>
-<li><a href="#orgc11aeaf">Variational approximation</a></li>
-<li><a href="#org6aaf465">Model fitting</a></li>
-<li><a href="#org3931ec2">Model evaluation</a></li>
-<li><a href="#org8fdf8a5">Limitations</a></li>
+<li><a href="#org3805485">Simulation setup</a></li>
+<li><a href="#org12a6125">Ordinary TWAS</a></li>
+<li><a href="#org5d41674">Joint model</a></li>
+<li><a href="#org4f71c98">Variational approximation</a></li>
+<li><a href="#org1e5e500">Model fitting</a></li>
+<li><a href="#org8fdb7c8">Model evaluation</a></li>
+<li><a href="#orgb86a723">Limitations</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org933b906" class="outline-2">
-<h2 id="org933b906">Simulation setup</h2>
-<div class="outline-text-2" id="text-org933b906">
+<div id="outline-container-org3805485" class="outline-2">
+<h2 id="org3805485">Simulation setup</h2>
+<div class="outline-text-2" id="text-org3805485">
 <ul class="org-ul">
 <li>Generate random genotypes in linkage equilibrium</li>
 
@@ -346,9 +346,9 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 </div>
 
-<div id="outline-container-org43e3e01" class="outline-2">
-<h2 id="org43e3e01">Ordinary TWAS</h2>
-<div class="outline-text-2" id="text-org43e3e01">
+<div id="outline-container-org12a6125" class="outline-2">
+<h2 id="org12a6125">Ordinary TWAS</h2>
+<div class="outline-text-2" id="text-org12a6125">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">import</span> sklearn.linear_model
 
@@ -361,9 +361,9 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 </div>
 
-<div id="outline-container-org1f182d9" class="outline-2">
-<h2 id="org1f182d9">Joint model</h2>
-<div class="outline-text-2" id="text-org1f182d9">
+<div id="outline-container-org5d41674" class="outline-2">
+<h2 id="org5d41674">Joint model</h2>
+<div class="outline-text-2" id="text-org5d41674">
 <div class="org-src-container">
 <pre class="src src-ipython">ed.set_seed(0)
 
@@ -398,9 +398,9 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 </div>
 
-<div id="outline-container-orgc11aeaf" class="outline-2">
-<h2 id="orgc11aeaf">Variational approximation</h2>
-<div class="outline-text-2" id="text-orgc11aeaf">
+<div id="outline-container-org4f71c98" class="outline-2">
+<h2 id="org4f71c98">Variational approximation</h2>
+<div class="outline-text-2" id="text-org4f71c98">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
@@ -483,9 +483,9 @@ simply apply the above result to get:
 </div>
 </div>
 
-<div id="outline-container-org6aaf465" class="outline-2">
-<h2 id="org6aaf465">Model fitting</h2>
-<div class="outline-text-2" id="text-org6aaf465">
+<div id="outline-container-org1e5e500" class="outline-2">
+<h2 id="org1e5e500">Model fitting</h2>
+<div class="outline-text-2" id="text-org1e5e500">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
     latent_vars={
@@ -512,9 +512,9 @@ inference.run(n_iter=2000, optimizer=<span class="org-string">'rmsprop'</span>)
 </div>
 </div>
 </div>
-<div id="outline-container-org3931ec2" class="outline-2">
-<h2 id="org3931ec2">Model evaluation</h2>
-<div class="outline-text-2" id="text-org3931ec2">
+<div id="outline-container-org8fdb7c8" class="outline-2">
+<h2 id="org8fdb7c8">Model evaluation</h2>
+<div class="outline-text-2" id="text-org8fdb7c8">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">import</span> matplotlib.gridspec
 <span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
@@ -553,9 +553,9 @@ plt.close()
 </div>
 </div>
 
-<div id="outline-container-org8fdf8a5" class="outline-2">
-<h2 id="org8fdf8a5">Limitations</h2>
-<div class="outline-text-2" id="text-org8fdf8a5">
+<div id="outline-container-orgb86a723" class="outline-2">
+<h2 id="orgb86a723">Limitations</h2>
+<div class="outline-text-2" id="text-orgb86a723">
 <p>
 Suppose we generated data from both mediated and unmediated effects:
 </p>
@@ -596,7 +596,7 @@ matrix is built on the rest of the genome.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-25 Sat 12:07</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

@@ -4,7 +4,7 @@
 <!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hierarchical model in Edward</title>
+<title>Non-centered parameterization of point-normal prior</title>
 <meta name="generator" content="Org mode">
 <meta name="author" content="Abhishek Sarkar">
 <style type="text/css">
@@ -227,108 +227,130 @@ for the JavaScript code in this tag.
  }
 /*]]>*///-->
 </script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
 </head>
 <body>
 <div id="content">
-<h1 class="title">Hierarchical model in Edward</h1>
+<h1 class="title">Non-centered parameterization of point-normal prior</h1>
+<div id="outline-container-org6dd6136" class="outline-2">
+<h2 id="org6dd6136">Introduction</h2>
+<div class="outline-text-2" id="text-org6dd6136">
+<p>
+We are interested in fitting generalized linear models by estimating a
+posterior over regression coefficients, assuming a model:
+</p>
 
-<div id="outline-container-org20ca455" class="outline-2">
-<h2 id="org20ca455">Setup</h2>
-<div class="outline-text-2" id="text-org20ca455">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
-<span class="org-keyword">from</span> edward.models <span class="org-keyword">import</span> Normal
-<span class="org-keyword">import</span> numpy <span class="org-keyword">as</span> np
-<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
-</pre>
-</div>
-</div>
-</div>
+<p>
+\[ p(x, y, \theta, \cdot) = p(y \mid x, \theta) p(\theta \mid \cdot) \]
+</p>
 
-<div id="outline-container-org7b53c2b" class="outline-2">
-<h2 id="org7b53c2b">Data</h2>
-<div class="outline-text-2" id="text-org7b53c2b">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">N</span> = 3  <span class="org-comment-delimiter"># </span><span class="org-comment">number of groups</span>
-<span class="org-variable-name">M</span> = 1000  <span class="org-comment-delimiter"># </span><span class="org-comment">samples per group</span>
+<p>
+Leaving aside the likelihood \(p(y \mid x, \theta)\), one powerful prior is
+the spike-and-slab prior (George and McCullough 1999):
+</p>
 
-<span class="org-comment-delimiter"># </span><span class="org-comment">mean for each group is different</span>
-<span class="org-comment-delimiter"># </span><span class="org-comment">want to infer the group means plus the overall mean</span>
-<span class="org-variable-name">actual_group_means</span> = [0.1, 0.2, 0.3]
-<span class="org-variable-name">sigma</span> = 0.1
+<p>
+\[ p(\theta_j \mid \cdot) = \pi_0 \delta_0(\theta_j) + (1 - \pi_0) N(\theta_j; 0, \tau^{-1}) \]
+</p>
 
-<span class="org-variable-name">observed_groups</span> = np.repeat([0, 1, 2], M)
-<span class="org-variable-name">samples</span> = [np.random.normal(actual_group_means[g], sigma, M) <span class="org-keyword">for</span> g <span class="org-keyword">in</span> <span class="org-builtin">range</span>(N)]
-<span class="org-variable-name">observed_data</span> = np.concatenate(samples)
-</pre>
-</div>
-</div>
-</div>
+<p>
+We (Park et al 2017) and others (Carbonetto and Stephens 2012) have
+previously applied variational inference to fit this model, assuming a
+conjugate approximating family:
+</p>
 
-<div id="outline-container-orged3736a" class="outline-2">
-<h2 id="orged3736a">Model</h2>
-<div class="outline-text-2" id="text-orged3736a">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">groups</span> = tf.placeholder(tf.int32, [M * N])
+<p>
+\[ q(\theta_j \mid \cdot) = \alpha_j \delta_0(\theta_j) + (1 - \alpha_j) N(\theta_j;
+  \beta_j, \gamma_j^{-1}) \]
+</p>
 
-<span class="org-variable-name">overall_mean</span> = Normal(
-  loc=tf.zeros(1), 
-  scale=tf.ones(1) * 0.05
-)
-<span class="org-variable-name">q_overall_mean</span> = Normal(
-  loc=tf.Variable(tf.zeros(1)),
-  scale=tf.nn.softplus(tf.Variable(tf.zeros(1)))
-)
+<p>
+This method works well; however, one challenge is estimating the
+hyperparameters \(\pi, \tau\). We previously developed a variational method
+which would simultaneously perform approximate Bayesian inference on the
+hyperparameters:
+</p>
 
-<span class="org-variable-name">group_means</span> = Normal(
-  loc=tf.ones(N) * overall_mean,
-  scale=tf.ones(N) * 0.05
-)
-<span class="org-variable-name">q_group_means</span> = Normal(
-  loc=tf.Variable(tf.zeros(N)),
-  scale=tf.nn.softplus(tf.Variable(tf.zeros(N)))
-)
+<p>
+\[ \rho = \ln\left(\frac{\pi_0}{1 - \pi_0}\right) \]
+</p>
 
-<span class="org-variable-name">data</span> = Normal(
-  loc=tf.gather(group_means, groups),
-  scale=tf.ones(shape=[N * M]) * sigma
-)
-</pre>
-</div>
-</div>
-</div>
+<p>
+\[ p(\rho) = N(\rho; 0, 1) \]
+</p>
 
-<div id="outline-container-orgbf88f96" class="outline-2">
-<h2 id="orgbf88f96">Inference</h2>
-<div class="outline-text-2" id="text-orgbf88f96">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-keyword">for</span> inference_alg <span class="org-keyword">in</span> (ed.ReparameterizationKLqp, ed.ReparameterizationKLKLqp):
-  <span class="org-variable-name">inference</span> = inference_alg(
-    {
-      overall_mean: q_overall_mean,
-      group_means: q_group_means
-    },
-    data={
-      groups: observed_groups,
-      data: observed_data
-    }
-  )
-  inference.run(n_samples=5, n_iter=1000)
-  <span class="org-variable-name">sess</span> = ed.get_session()
-  <span class="org-keyword">print</span>(<span class="org-string">'Using {}:'</span>.<span class="org-builtin">format</span>(inference_alg))
-  <span class="org-keyword">print</span>(q_overall_mean.mean().<span class="org-builtin">eval</span>())
-  <span class="org-keyword">print</span>(q_group_means.mean().<span class="org-builtin">eval</span>())
-</pre>
-</div>
+<p>
+\[ p(\tau) = N(\tau; 0, 1) \]
+</p>
 
-<pre class="example">
-Using &lt;class 'edward.inferences.klqp.ReparameterizationKLqp'&gt;:
-[ 0.15242636]
-[ 0.08973102  0.20209159  0.30212268]
-Using &lt;class 'edward.inferences.klqp.ReparameterizationKLKLqp'&gt;:
-[ 0.]
-[ 0.07926108  0.18680389  0.30515084]
-</pre>
+<p>
+\[ q(\rho \mid \cdot) = N(\rho; m_\rho, p_\rho^{-1}) \]
+</p>
+
+<p>
+\[ q(\tau \mid \cdot) = N(\tau; m_\tau, p_\tau^{-1}) \]
+</p>
+
+<p>
+In this parameterization, the evidence lower bound (ELBO) is not analytic:
+</p>
+
+<p>
+\[ ELBO = E_q[\ln p(y \mid x, \theta)] - E_{q(\tau)} \left[KL\left(q(\theta) \Vert
+  p(\theta) \right)\right] - E_{q(\pi)}\left[KL\left(q(z) \Vert
+  p(z)\right)\right] - KL(q(\rho)\Vert p(\rho)) - KL(q(\tau) \Vert p(\tau)) \]
+</p>
+
+<p>
+Instead, we have to use the reparameterization trick to estimate gradients
+and optimize the ELBO via gradient descent.
+</p>
+
+<p>
+Further, the hyperparameters \(\rho, \tau\) are tightly coupled, as
+previously observed (Zhou, Carbonetto, and Stephens 2013). This could lead
+the empirically observed properties where the algorithm sometimes fails to
+escape the degenerate solution \(\theta \rightarrow 0, \pi_0 \rightarrow 1\).
+</p>
+
+<p>
+We could partially address these problems by using a non-centered
+parameterization of the prior:
+</p>
+
+<p>
+\[ \theta_j = \tau^{-1} \tilde\theta_j z_j \]
+</p>
+
+<p>
+\[ p(\tilde\theta_j) = N(0, 1) \]
+</p>
+
+<p>
+Here, we investigate the properties of variational inference against this
+parameterization.
+</p>
 </div>
 </div>
 </div>

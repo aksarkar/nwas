@@ -7,7 +7,19 @@ import numpy as np
 import tensorflow as tf
 
 def normal_llik(y, mean, prec):
-  return -.5 * (-tf.log(prec) + tf.square(y - mean) * prec)
+  return .5 * (tf.log(prec) - tf.log(tf.constant(2 * np.pi)) - tf.square(y - mean) * prec)
+
+def nb_llik(y, log_mean, neg_log_disp):
+  """y_ij ~ Pois(exp(log_mean) u_ij)
+     u_ij ~ Gamma(exp(-neg_log_disp), exp(-neg_log_disp))
+
+  """
+  return (y * (log_mean - neg_log_disp) -
+          y * tf.softplus(log_mean - neg_log_disp) -
+          tf.exp(neg_log_disp) * tf.softplus(log_mean - neg_log_disp) +
+          tf.lgamma(y + tf.exp(neg_log_disp)) -
+          tf.lgamma(y + 1) -
+          tf.lgamma(tf.exp(neg_log_disp)))
 
 def normal_sample(mean, prec, n=1):
   samples = tf.random_normal([n]) * tf.ones(tf.shape(mean))
@@ -21,7 +33,7 @@ def kl_bernoulli_bernoulli(p, q, reduce=True):
   """Rasmussen & Williams eq. A.22"""
   return (p * tf.log(p / q) + (1 - p) * tf.log((1 - p) / (1 - q)))
 
-def biased_softplus(x, bias=1e-6):
+def biased_softplus(x, bias=1e-3):
   return bias + tf.nn.softplus(x)
 
 def sigmoid(x):
@@ -33,14 +45,18 @@ def sigmoid(x):
   min_ = np.log(np.finfo('float32').resolution)
   return tf.nn.sigmoid(tf.clip_by_value(x, min_, -min_))
 
-def sgvb(feed_dict, error, kl, opt, num_epochs=1000, learning_rate=1e-2, trace=None, verbose=False):
+def sgvb(feed_dict, error, kl, opt, num_epochs=1000, learning_rate=1e-2, assert_op=None, trace=None, verbose=False, debug=False):
   elbo = error - tf.add_n(kl)
   opt.append(elbo)
   trace_ = [elbo, error] + kl
   if trace is not None:
     trace_.extend(trace)
   optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
-  train = optimizer.minimize(-elbo)
+  if assert_op is not None and debug:
+    with tf.control_dependencies([assert_op]):
+      train = optimizer.minimize(-elbo)
+  else:
+    train = optimizer.minimize(-elbo)
 
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -66,7 +82,7 @@ def gaussian_spike_slab(x, y, stoch_samples=10, **kwargs):
       resid_prec_prec = biased_softplus(tf.get_variable('resid_prec_prec', shape=[1]))
 
       logodds_mean = tf.get_variable('logodds_mean', initializer=tf.constant([-10.]))
-      logodds_prec = biased_softplus(tf.get_variable('q_logodds_log_prec', shape=[1]))
+      logodds_prec = biased_softplus(tf.get_variable('logodds_prec', shape=[1]))
 
       # Effect size inverse variance
       effect_prec_mean = tf.get_variable('effect_prec_mean', shape=[1])
@@ -93,15 +109,89 @@ def gaussian_spike_slab(x, y, stoch_samples=10, **kwargs):
       tf.reduce_mean(tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec), axis=1)),
       tf.reduce_sum(kl_normal_normal(logodds_mean, logodds_prec, tf.constant(0.), tf.constant(1.))),
       tf.reduce_sum(kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))),
+      tf.reduce_sum(kl_normal_normal(resid_prec_mean, resid_prec_prec, tf.constant(0.), tf.constant(1.))),
     ]
 
     # GLM coefficient of determination
     R = 1 - tf.reduce_sum(tf.square(y_ph - eta_mean)) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+
+    assert_op = tf.group(
+      tf.assert_non_negative(resid_prec_prec, name='assert_resid_prec_prec'),
+      tf.assert_non_negative(logodds_prec, name='assert_logodds_prec'),
+      tf.assert_non_negative(effect_prec_prec, name='assert_effect_prec_prec'),
+      tf.assert_non_negative(prec, name='assert_prec'),
+      tf.assert_non_negative(eta_var, name='assert_var'),
+      tf.assert_non_negative(eta_var, name='assert_error'),
+      tf.assert_non_positive(normal_llik(y_ph, eta, resid_prec)),
+      tf.assert_non_positive(normal_llik(y_ph, eta, resid_prec)),
+    )
+
     opt = [pip, effect_posterior_mean, effect_posterior_var,
-           logodds_mean, tf.reciprocal(biased_softplus(logodds_prec)),
+           logodds_mean, tf.reciprocal(logodds_prec),
            effect_prec_mean,
-           tf.reciprocal(biased_softplus(effect_prec_prec))]
-    return sgvb({x_ph: x, y_ph: y}, error, kl, opt, trace=[R], **kwargs)
+           tf.reciprocal(effect_prec_prec),
+           resid_prec_mean,
+           resid_prec_prec]
+    return sgvb({x_ph: x, y_ph: y}, error, kl, opt, assert_op=assert_op, trace=[R], **kwargs)
+
+def nb_spike_slab(x, y, size, stoch_samples=10, **kwargs):
+  """y[i,j] ~ Pois(size[i] * exp(X[,i] * v) * u[i,j])
+     u[i,j] ~ Gamma(exp(-X[,i] * w), exp(-X[,i] * w))
+  """
+  n, p = x.shape
+  graph = tf.Graph()
+  with graph.as_default():
+    x_ph = tf.placeholder(tf.float32)
+    y_ph = tf.placeholder(tf.float32)
+
+    with tf.variable_scope('q', initializer=tf.zeros_initializer):
+      # Residual inverse variance
+      resid_prec_mean = tf.get_variable('resid_prec_mean', shape=[1])
+      resid_prec_prec = biased_softplus(tf.get_variable('resid_prec_prec', shape=[1]))
+
+      logodds_mean = tf.get_variable('logodds_mean', initializer=tf.constant([-10.]))
+      logodds_prec = biased_softplus(tf.get_variable('logodds_prec', shape=[1]))
+
+      # Effect size inverse variance
+      effect_prec_mean = tf.get_variable('effect_prec_mean', shape=[1])
+      effect_prec_prec = biased_softplus(tf.get_variable('effect_prec_prec', shape=[1]))
+
+      pip = sigmoid(tf.get_variable('pip', shape=[p, 1]))
+      mean = tf.get_variable('effect_mean', shape=[p, 1])
+      prec = biased_softplus(tf.get_variable('prec', shape=[p, 1]))
+
+    effect_posterior_mean = pip * mean
+    effect_posterior_var = pip / prec + pip * (1 - pip) * tf.square(mean)
+
+    eta_mean = tf.matmul(x_ph, effect_posterior_mean)
+    eta_var = tf.matmul(tf.square(x_ph), effect_posterior_var)
+
+    eta = normal_sample(eta_mean, tf.reciprocal(eta_var), stoch_samples)
+    resid_prec = biased_softplus(normal_sample(resid_prec_mean, resid_prec_prec, stoch_samples))
+    odds = sigmoid(normal_sample(logodds_mean, logodds_prec, stoch_samples))
+    effect_prec = tf.exp(normal_sample(effect_prec_mean, effect_prec_prec, stoch_samples))
+
+    error = tf.reduce_mean(tf.reduce_sum(normal_llik(y_ph, eta, resid_prec), axis=1))
+    kl = [
+      tf.reduce_mean(tf.reduce_sum(kl_bernoulli_bernoulli(pip, odds), axis=1)),
+      tf.reduce_mean(tf.reduce_sum(pip * kl_normal_normal(mean, prec, tf.constant(0.), effect_prec), axis=1)),
+      tf.reduce_sum(kl_normal_normal(logodds_mean, logodds_prec, tf.constant(0.), tf.constant(1.))),
+      tf.reduce_sum(kl_normal_normal(effect_prec_mean, effect_prec_prec, tf.constant(0.), tf.constant(1.))),
+      tf.reduce_sum(kl_normal_normal(resid_prec_mean, resid_prec_prec, tf.constant(0.), tf.constant(1.))),
+    ]
+
+    # GLM coefficient of determination
+    R = 1 - tf.reduce_sum(tf.square(y_ph - eta_mean)) / tf.reduce_sum(tf.square(y_ph - tf.reduce_mean(y_ph)))
+
+    opt = [pip, effect_posterior_mean, effect_posterior_var,
+           logodds_mean, tf.reciprocal(logodds_prec),
+           effect_prec_mean,
+           tf.reciprocal(effect_prec_prec),
+           resid_prec_mean,
+           resid_prec_prec]
+    return sgvb({}, error, kl, opt, assert_op=assert_op, trace=[R], **kwargs)
+  
+
 
 def project_simplex(x):
   """Project x onto the probability simplex

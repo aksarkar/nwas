@@ -1,0 +1,59 @@
+#+TITLE: Non-centered parameterization of point-normal prior
+#+SETUPFILE: setup.org
+* Introduction
+
+  We are interested in fitting generalized linear models by estimating a
+  posterior over regression coefficients, assuming a model:
+
+  \[ p(x, y, \theta, \cdot) = p(y \mid x, \theta) p(\theta \mid \cdot) \]
+
+  Leaving aside the likelihood \(p(y \mid x, \theta)\), one powerful prior is
+  the spike-and-slab prior (George and McCullough 1999):
+
+  \[ p(\theta_j \mid \cdot) = \pi_0 \delta_0(\theta_j) + (1 - \pi_0) N(\theta_j; 0, \tau^{-1}) \]
+
+  We (Park et al 2017) and others (Carbonetto and Stephens 2012) have
+  previously applied variational inference to fit this model, assuming a
+  conjugate approximating family:
+
+  \[ q(\theta_j \mid \cdot) = \alpha_j \delta_0(\theta_j) + (1 - \alpha_j) N(\theta_j;
+  \beta_j, \gamma_j^{-1}) \]
+
+  This method works well; however, one challenge is estimating the
+  hyperparameters \(\pi, \tau\). We previously developed a variational method
+  which would simultaneously perform approximate Bayesian inference on the
+  hyperparameters:
+
+  \[ \rho = \ln\left(\frac{\pi_0}{1 - \pi_0}\right) \]
+
+  \[ p(\rho) = N(\rho; 0, 1) \]
+
+  \[ p(\tau) = N(\tau; 0, 1) \]
+
+  \[ q(\rho \mid \cdot) = N(\rho; m_\rho, p_\rho^{-1}) \]
+
+  \[ q(\tau \mid \cdot) = N(\tau; m_\tau, p_\tau^{-1}) \]
+  
+  In this parameterization, the evidence lower bound (ELBO) is not analytic:
+
+  \[ ELBO = E_q[\ln p(y \mid x, \theta)] - E_{q(\tau)} \left[KL\left(q(\theta) \Vert
+  p(\theta) \right)\right] - E_{q(\pi)}\left[KL\left(q(z) \Vert
+  p(z)\right)\right] - KL(q(\rho)\Vert p(\rho)) - KL(q(\tau) \Vert p(\tau)) \]
+
+  Instead, we have to use the reparameterization trick to estimate gradients
+  and optimize the ELBO via gradient descent.
+
+  Further, the hyperparameters \(\rho, \tau\) are tightly coupled, as
+  previously observed (Zhou, Carbonetto, and Stephens 2013). This could lead
+  the empirically observed properties where the algorithm sometimes fails to
+  escape the degenerate solution \(\theta \rightarrow 0, \pi_0 \rightarrow 1\).
+
+  We could partially address these problems by using a non-centered
+  parameterization of the prior:
+
+  \[ \theta_j = \tau^{-1} \tilde\theta_j z_j \]
+
+  \[ p(\tilde\theta_j) = N(0, 1) \]
+
+  Here, we investigate the properties of variational inference against this
+  parameterization.

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-25 Sat 12:07 -->
+<!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Analytical derivations for non-exchangeable prior</title>
@@ -178,12 +178,6 @@
   .org-svg { width: 90%; }
   /*]]>*/-->
 </style>
-<link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
-<link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
 <script type="text/javascript">
 /*
 @licstart  The following is the entire license notice for the
@@ -260,22 +254,22 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgb67d192">Introduction</a></li>
-<li><a href="#org8f01666">Induction</a></li>
-<li><a href="#org59490cb">Induction on cross terms</a>
+<li><a href="#org76962b4">Introduction</a></li>
+<li><a href="#orgc8e3fe5">Induction</a></li>
+<li><a href="#org7d83175">Induction on cross terms</a>
 <ul>
-<li><a href="#org69eda2c">Case L = 1</a></li>
-<li><a href="#orga5adfcb">Case L = 2</a></li>
-<li><a href="#org4449a5c">General case</a></li>
+<li><a href="#orgbf96ffc">Case L = 1</a></li>
+<li><a href="#orge86b264">Case L = 2</a></li>
+<li><a href="#orga7a62a6">General case</a></li>
 </ul>
 </li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-orgb67d192" class="outline-2">
-<h2 id="orgb67d192">Introduction</h2>
-<div class="outline-text-2" id="text-orgb67d192">
+<div id="outline-container-org76962b4" class="outline-2">
+<h2 id="org76962b4">Introduction</h2>
+<div class="outline-text-2" id="text-org76962b4">
 <p>
 Assume \(\mathbf{y}\) is \(n \times 1\), \(\mathbf{x}\) is \(n \times p\),
 \(m\) is the (maximum) number of causal effects.
@@ -333,9 +327,9 @@ Specifically, we seek an analytical expression for the first term:
 </div>
 </div>
 
-<div id="outline-container-org8f01666" class="outline-2">
-<h2 id="org8f01666">Induction</h2>
-<div class="outline-text-2" id="text-org8f01666">
+<div id="outline-container-orgc8e3fe5" class="outline-2">
+<h2 id="orgc8e3fe5">Induction</h2>
+<div class="outline-text-2" id="text-orgc8e3fe5">
 <p>
 Let \(w_{rj} = z_{rj} b_{rj}\) and let \(w_j^{(k)} = \sum_{r=1}^k z_{rj} b_{rj}\).
 </p>
@@ -396,13 +390,13 @@ Now suppose \(k > 1\). Then:
 </div>
 </div>
 
-<div id="outline-container-org59490cb" class="outline-2">
-<h2 id="org59490cb">Induction on cross terms</h2>
-<div class="outline-text-2" id="text-org59490cb">
+<div id="outline-container-org7d83175" class="outline-2">
+<h2 id="org7d83175">Induction on cross terms</h2>
+<div class="outline-text-2" id="text-org7d83175">
 </div>
-<div id="outline-container-org69eda2c" class="outline-3">
-<h3 id="org69eda2c">Case L = 1</h3>
-<div class="outline-text-3" id="text-org69eda2c">
+<div id="outline-container-orgbf96ffc" class="outline-3">
+<h3 id="orgbf96ffc">Case L = 1</h3>
+<div class="outline-text-3" id="text-orgbf96ffc">
 <p>
 Dropping the first index for clarity and considering two indices \(j, k \in
   [p]\), if \(j = k\):
@@ -483,9 +477,9 @@ cov
 </div>
 </div>
 
-<div id="outline-container-orga5adfcb" class="outline-3">
-<h3 id="orga5adfcb">Case L = 2</h3>
-<div class="outline-text-3" id="text-orga5adfcb">
+<div id="outline-container-orge86b264" class="outline-3">
+<h3 id="orge86b264">Case L = 2</h3>
+<div class="outline-text-3" id="text-orge86b264">
 <p>
 If \(j = k\):
 </p>
@@ -549,9 +543,9 @@ Each term is an expectation conditioned over 4 possible values \((z_{1j},
 </div>
 </div>
 
-<div id="outline-container-org4449a5c" class="outline-3">
-<h3 id="org4449a5c">General case</h3>
-<div class="outline-text-3" id="text-org4449a5c">
+<div id="outline-container-orga7a62a6" class="outline-3">
+<h3 id="orga7a62a6">General case</h3>
+<div class="outline-text-3" id="text-orga7a62a6">
 <p>
 \[ E_q \left[\left( \sum_r z_{rj} b_{rj} \right) \left( \sum_s z_{sk} z_{sk}
   \right) \right] \]
@@ -695,7 +689,7 @@ result
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-25 Sat 12:07</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

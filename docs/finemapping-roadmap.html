@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2018-03-18 Sun 19:50 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roadmap for fine-mapping paper</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Abhishek Sarkar">
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cosmo/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+<style type="text/css">body {width: 60em; margin:auto} pre.src {overflow:auto}</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Roadmap for fine-mapping paper</h1>
+
+<div id="outline-container-orgf4c75b9" class="outline-2">
+<h2 id="orgf4c75b9">Motivation</h2>
+<div class="outline-text-2" id="text-orgf4c75b9">
+<p>
+The main challenge in estimating posterior inclusion probabilities for
+variables in sparse Bayesian regression is marginalizing over all possible
+configurations of variables. 
+</p>
+
+<p>
+Prior work addressed this challenge by using a variational approximation
+which avoids marginalization. However, the main limitation of this approach
+is that it does not accurately estimate PIP when variables are correlated to
+each other.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgc5f5080" class="outline-2">
+<h2 id="orgc5f5080">What is the contribution?</h2>
+<div class="outline-text-2" id="text-orgc5f5080">
+</div>
+<div id="outline-container-org0e04f10" class="outline-3">
+<h3 id="org0e04f10">The application</h3>
+<div class="outline-text-3" id="text-org0e04f10">
+<p>
+The goal of statistical fine mapping is to produce a <i>credible set</i>, a set
+of variants which contains the causal variants with high posterior
+probability.
+</p>
+
+<p>
+Why did we need credible sets in the first place? In fine-mapping GWAS, we
+need to prioritize variants for experimental followup. Naturally then, the
+main metric for innovations in this problem are reducing the size of
+credible sets. If the main advance of the approach is to get the same PIP,
+but quicker, then we haven't made an advance on this matric.
+</p>
+
+<p>
+The main barrier to experimentally validating more non-coding loci is not
+making the credible set smaller. We are now at the point where credible sets
+are already single variants (<a href="https://www.nature.com/articles/nature22969">Huang et al 2015</a>).
+</p>
+
+<p>
+The main barrier is getting the causal gene and the causal tissue in each
+locus. We have a handful of experimentally validated non-coding causal
+variants in GWAS loci:
+</p>
+
+<ul class="org-ul">
+<li><code>rs12740374</code> creates a C/EBP binding site, alters expression of <i>SORT1</i>,
+which alters hepatic secretion of LDL (<a href="https://www.nature.com/articles/nature09266">Musunru et al 2010</a>)</li>
+<li><code>rs6795970</code> disrupts TBX3 binding, alters expression of <i>SCN5A</i> and
+<i>SCN10A</i>, which alters QRS duration (<a href="https://www.jci.org/articles/view/62613">van den Boogaard et al 2012</a>,
+<a href="https://www.jci.org/articles/view/62617">Arnolds et al 2012</a>)</li>
+<li><code>rs1421085</code> disrupts ARID5B binding, alters expression of <i>IRX3</i> and
+<i>IRX5</i>, altering adipocyte differentiation (<a href="http://www.nejm.org/doi/full/10.1056/NEJMoa1502214#t=article">Claussnitzer et al 2015</a>)</li>
+<li><code>rs1743292</code> and <code>rs1772203</code> alter DNaseI hypersensitivity (based on
+allelic imbalance of DHS reads), altering expression of BVES, which
+alters QT interval duration (<a href="https://elifesciences.org/articles/10557">Wang et al 2016</a>)</li>
+</ul>
+
+<p>
+Some observations about this list:
+</p>
+
+<ul class="org-ul">
+<li>GTEx sample sizes are too small, or GTEx is missing the tissue in each of
+these loci</li>
+<li>At the end of the day, they recovered a single causal variant</li>
+</ul>
+
+<p>
+The obvious thing to do is to fine map every gene in every tissue in GTEx.
+<a href="https://www.biorxiv.org/content/early/2017/10/15/203380">This has already been done using CAVIAR</a>.
+</p>
+
+<p>
+If the main advance of our approach is to be able to quickly fit models
+without assuming some small number of causal variants (like CAVIAR), it's
+unclear how relevant this is, because we have yet to find an instance of
+multiple causal variants in a locus.
+</p>
+
+<p>
+The most obvious limitation of this approach which needs to be addressed is
+not computational cost (just put it on a bigger computer). Rather, we need
+to address the model itself, looking more than 1 MB away from the gene,
+allowing regulatory SNPs to "skip over" genes, and using more information
+than just genetic variation. Yongjin Park and I <a href="https://www.biorxiv.org/content/early/2017/11/18/219428">developed a method</a>
+incorporating some of these ideas.
+</p>
+
+<p>
+And we can now simply experimentally observe the causal regulatory elements
+for gene expression:
+</p>
+
+<ul class="org-ul">
+<li><b>Sharpr-MPRA (<a href="https://www.nature.com/articles/nbt.3678">Ernst et al 2016</a>)</b>. Take 295 bp around 14,000 regulatory
+elements, synthesize luciferase reporters for overlapping 145 bp tiles,
+infer the causal nucleotide (to within 5 bp) using a Gaussian graphical
+model</li>
+
+<li><b>CRISPRi (<a href="http://science.sciencemag.org/content/354/6313/769.long">Fulco et al 2016</a>)</b>. Use KRAB-dCas9 to alter chromatin state,
+targetting every base pair in &gt;1 MB around GATA1 and MYC, directly observe
+the causal nucleotides</li>
+
+<li><b>ScanDel (<a href="http://www.cell.com/ajhg/fulltext/S0002-9297(17)30245-8">Gasperini et al 2017</a>)</b>. Use CRISPR to systematically delete
+every 1-2 kb window in 206 kb around HPRT1</li>
+
+<li><b>HiDRA (<a href="https://www.biorxiv.org/content/early/2017/09/27/193136">Wang et al 2017</a>)</b>. Use ATAC-Seq to enrich for reads from
+regulatory elements, perform STARR-Seq to test their function, modify the
+SHARPR algorithm to infer causal nucleotides</li>
+</ul>
+
+<p>
+So, the interesting problem that needs to be solved is not calibrating PIPs
+for cis-eQTLs in GTEx, but finding new creative ways to interrogate
+transcriptional regulation.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org757417d" class="outline-3">
+<h3 id="org757417d">The prior</h3>
+<div class="outline-text-3" id="text-org757417d">
+<p>
+Yongjin Park and I have an inference engine to build arbitrarily complicated
+models using spike-and-slab prior (SSB). But the challenge is that we have
+to be frequentist with respect to the PIP, because the method overstates
+confidence in the selected variables.
+</p>
+
+<p>
+In simulation, we treat the variable selection problem as a prediction
+problem and use typical machine learning metrics (precision-recall) to
+characterize the performance. We find that typically the method
+outperforms regularized regression on these metrics.
+</p>
+
+<p>
+However, taking this approach means we can't interpret the PIPs (because
+they're always 0 or 1). In real data analysis, we instead bootstrap/permute
+to get frequentist p-values and local FDR. In essence, we simply drop in
+spike-and-slab regression where we would have used regularized regression
+before.
+</p>
+
+<p>
+The main challenge in using the method on bigger models is getting
+statistically sound claims from the the fitted models. If we had a prior and
+matching variational approximation that got the PIP correct, then I would
+like a component which could simply be used in automatic inference place of
+SSB. Then, we would immediately get calibrated PIPs for arbitrarily
+complicated models and could simply use the estimates instead of permutation
+testing.
+</p>
+
+<p>
+Along these lines, the way to make a novel prior most useful to
+practitioners would be to build it into a probabilistic programming
+language.
+</p>
+
+<p>
+The fact that this is not immediately trivial to do is interesting and
+important. We already know how to use Categorical random variables in
+automatic inference (the <a href="https://arxiv.org/abs/1611.00712">Concrete relaxation</a>, and the <a href="https://arxiv.org/abs/1611.01144">Gumbel-Softmax
+distribution</a>). However, simply plugging these in doesn't work.
+</p>
+
+<p>
+Similarly, in our inference engine we just have to be able to characterize
+the mean and variance of \(X\beta\). In our preliminary experiments, this
+doesn't work, because the variational parameters \(\alpha\) have to
+constrainted to the probability simplex. In principle, we should be able to
+use the softmax basis (<a href="https://link.springer.com/article/10.1023/A:1007558615313">Mackay 1998</a>) to turn this into an unconstrained
+problem, giving us automatic inference not only for this prior, but also for
+the <code>ash</code> prior.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org9ccf49c" class="outline-3">
+<h3 id="org9ccf49c">The algorithm</h3>
+<div class="outline-text-3" id="text-org9ccf49c">
+<p>
+The key idea of the <a href="https://stephens999.github.io/misc/newVB.ss.html">proposed approach</a> is that solving the problem assuming a
+single non-zero coefficient is easy (update the variational parameters using
+the single SNP Bayes factor). Assuming that coefficients are conditionally
+independent given the genotypes and phenotype, this means we can simply
+update single effects round-robin.
+</p>
+
+<p>
+How large is the class of models for which this approach generalizes?
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org9dfd57d" class="outline-2">
+<h2 id="org9dfd57d">Comparison to existing methods</h2>
+<div class="outline-text-2" id="text-org9dfd57d">
+<ul class="org-ul">
+<li><a href="http://www.genetics.org/content/early/2014/08/06/genetics.114.167908.full.pdf+html">CAVIAR</a> (2014)</li>
+<li><a href="http://www.genetics.org/content/200/3/719.long">CAVIARBF</a> (2015)</li>
+<li><a href="https://www.nature.com/articles/ncomms9555">eQTeL</a> (2015)</li>
+<li><a href="http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004722">PAINTOR</a> (2015)</li>
+<li><a href="https://academic.oup.com/bioinformatics/article-lookup/doi/10.1093/bioinformatics/btw018">FINEMAP</a> (2016)</li>
+<li><a href="https://academic.oup.com/nar/article/44/18/e144/2468351">RiVIERA</a> (2016)</li>
+<li><a href="http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004787">GPA</a> (2016)</li>
+</ul>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Abhishek Sarkar</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

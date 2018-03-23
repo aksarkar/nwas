@@ -4,7 +4,7 @@
 <!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hierarchical model in Edward</title>
+<title>Beta-Bernoulli model</title>
 <meta name="generator" content="Org mode">
 <meta name="author" content="Abhishek Sarkar">
 <style type="text/css">
@@ -230,14 +230,23 @@ for the JavaScript code in this tag.
 </head>
 <body>
 <div id="content">
-<h1 class="title">Hierarchical model in Edward</h1>
+<h1 class="title">Beta-Bernoulli model</h1>
 
-<div id="outline-container-org20ca455" class="outline-2">
-<h2 id="org20ca455">Setup</h2>
-<div class="outline-text-2" id="text-org20ca455">
+<div id="outline-container-org19b3f8f" class="outline-2">
+<h2 id="org19b3f8f">Setup</h2>
+<div class="outline-text-2" id="text-org19b3f8f">
+<div class="org-src-container">
+<pre class="src src-emacs-lisp">(org-babel-lob-ingest <span class="org-string">"~/.emacs.d/org-templates/library.org"</span>)
+</pre>
+</div>
+
+<pre class="example">
+Submitted batch job 41410125
+
+</pre>
+
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
-<span class="org-keyword">from</span> edward.models <span class="org-keyword">import</span> Normal
 <span class="org-keyword">import</span> numpy <span class="org-keyword">as</span> np
 <span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
 </pre>
@@ -245,90 +254,40 @@ for the JavaScript code in this tag.
 </div>
 </div>
 
-<div id="outline-container-org7b53c2b" class="outline-2">
-<h2 id="org7b53c2b">Data</h2>
-<div class="outline-text-2" id="text-org7b53c2b">
+<div id="outline-container-org4474966" class="outline-2">
+<h2 id="org4474966">Data</h2>
+<div class="outline-text-2" id="text-org4474966">
 <div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">N</span> = 3  <span class="org-comment-delimiter"># </span><span class="org-comment">number of groups</span>
-<span class="org-variable-name">M</span> = 1000  <span class="org-comment-delimiter"># </span><span class="org-comment">samples per group</span>
-
-<span class="org-comment-delimiter"># </span><span class="org-comment">mean for each group is different</span>
-<span class="org-comment-delimiter"># </span><span class="org-comment">want to infer the group means plus the overall mean</span>
-<span class="org-variable-name">actual_group_means</span> = [0.1, 0.2, 0.3]
-<span class="org-variable-name">sigma</span> = 0.1
-
-<span class="org-variable-name">observed_groups</span> = np.repeat([0, 1, 2], M)
-<span class="org-variable-name">samples</span> = [np.random.normal(actual_group_means[g], sigma, M) <span class="org-keyword">for</span> g <span class="org-keyword">in</span> <span class="org-builtin">range</span>(N)]
-<span class="org-variable-name">observed_data</span> = np.concatenate(samples)
+<pre class="src src-ipython"><span class="org-variable-name">observations</span> = np.random.binomial(n=1, p=0.3, size=(100,))
+observations.mean()
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-orged3736a" class="outline-2">
-<h2 id="orged3736a">Model</h2>
-<div class="outline-text-2" id="text-orged3736a">
+<div id="outline-container-orgc63c997" class="outline-2">
+<h2 id="orgc63c997">Model</h2>
+<div class="outline-text-2" id="text-orgc63c997">
 <div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">groups</span> = tf.placeholder(tf.int32, [M * N])
+<pre class="src src-ipython"><span class="org-variable-name">M</span> = ed.models
 
-<span class="org-variable-name">overall_mean</span> = Normal(
-  loc=tf.zeros(1), 
-  scale=tf.ones(1) * 0.05
-)
-<span class="org-variable-name">q_overall_mean</span> = Normal(
-  loc=tf.Variable(tf.zeros(1)),
-  scale=tf.nn.softplus(tf.Variable(tf.zeros(1)))
-)
-
-<span class="org-variable-name">group_means</span> = Normal(
-  loc=tf.ones(N) * overall_mean,
-  scale=tf.ones(N) * 0.05
-)
-<span class="org-variable-name">q_group_means</span> = Normal(
-  loc=tf.Variable(tf.zeros(N)),
-  scale=tf.nn.softplus(tf.Variable(tf.zeros(N)))
+<span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
+<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
+<span class="org-keyword">from</span> edward.models <span class="org-keyword">import</span> (
+        Beta,
+        Bernoulli,
+        Empirical
 )
 
-<span class="org-variable-name">data</span> = Normal(
-  loc=tf.gather(group_means, groups),
-  scale=tf.ones(shape=[N * M]) * sigma
-)
+<span class="org-variable-name">x_prob</span> = Beta(0.3, 1.0)
+<span class="org-variable-name">x</span> = Bernoulli(probs=x_prob)
+
+<span class="org-variable-name">qx_prob</span> = Empirical(params=tf.Variable(tf.zeros(1000)))
+
+<span class="org-variable-name">inference</span> = ed.HMC({x_prob: qx_prob}, data={x: 1})
+inference.run()
 </pre>
 </div>
-</div>
-</div>
-
-<div id="outline-container-orgbf88f96" class="outline-2">
-<h2 id="orgbf88f96">Inference</h2>
-<div class="outline-text-2" id="text-orgbf88f96">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-keyword">for</span> inference_alg <span class="org-keyword">in</span> (ed.ReparameterizationKLqp, ed.ReparameterizationKLKLqp):
-  <span class="org-variable-name">inference</span> = inference_alg(
-    {
-      overall_mean: q_overall_mean,
-      group_means: q_group_means
-    },
-    data={
-      groups: observed_groups,
-      data: observed_data
-    }
-  )
-  inference.run(n_samples=5, n_iter=1000)
-  <span class="org-variable-name">sess</span> = ed.get_session()
-  <span class="org-keyword">print</span>(<span class="org-string">'Using {}:'</span>.<span class="org-builtin">format</span>(inference_alg))
-  <span class="org-keyword">print</span>(q_overall_mean.mean().<span class="org-builtin">eval</span>())
-  <span class="org-keyword">print</span>(q_group_means.mean().<span class="org-builtin">eval</span>())
-</pre>
-</div>
-
-<pre class="example">
-Using &lt;class 'edward.inferences.klqp.ReparameterizationKLqp'&gt;:
-[ 0.15242636]
-[ 0.08973102  0.20209159  0.30212268]
-Using &lt;class 'edward.inferences.klqp.ReparameterizationKLKLqp'&gt;:
-[ 0.]
-[ 0.07926108  0.18680389  0.30515084]
-</pre>
 </div>
 </div>
 </div>

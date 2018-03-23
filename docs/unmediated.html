@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2017-11-25 Sat 12:07 -->
+<!-- 2018-03-18 Sun 19:50 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Modeling uncorrelated, unmediated effects</title>
@@ -257,20 +257,20 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org7753522">Introduction</a></li>
-<li><a href="#orgb3e857a">Simulation setup</a></li>
-<li><a href="#org1e618a9">Joint model</a></li>
-<li><a href="#orgb4a57a3">Variational approximation</a></li>
-<li><a href="#orga3683a2">Model fitting</a></li>
-<li><a href="#org593a383">Model evaluation</a></li>
-<li><a href="#org0ab67c2">Conclusions</a></li>
+<li><a href="#orgcb10c07">Introduction</a></li>
+<li><a href="#orgb1fd467">Simulation setup</a></li>
+<li><a href="#org78b0ae7">Joint model</a></li>
+<li><a href="#orgd8f0f24">Variational approximation</a></li>
+<li><a href="#org8cf27bb">Model fitting</a></li>
+<li><a href="#org3f58991">Model evaluation</a></li>
+<li><a href="#org16a9e8c">Conclusions</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org7753522" class="outline-2">
-<h2 id="org7753522">Introduction</h2>
-<div class="outline-text-2" id="text-org7753522">
+<div id="outline-container-orgcb10c07" class="outline-2">
+<h2 id="orgcb10c07">Introduction</h2>
+<div class="outline-text-2" id="text-orgcb10c07">
 <p>
 Suppose we generate phenotypes from both mediated and unmediated effects:
 </p>
@@ -293,9 +293,9 @@ arbitrarily.
 </div>
 </div>
 
-<div id="outline-container-orgb3e857a" class="outline-2">
-<h2 id="orgb3e857a">Simulation setup</h2>
-<div class="outline-text-2" id="text-orgb3e857a">
+<div id="outline-container-orgb1fd467" class="outline-2">
+<h2 id="orgb1fd467">Simulation setup</h2>
+<div class="outline-text-2" id="text-orgb1fd467">
 <ul class="org-ul">
 <li>Generate random genotypes in linkage equilibrium</li>
 
@@ -345,9 +345,9 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 </div>
 
-<div id="outline-container-org1e618a9" class="outline-2">
-<h2 id="org1e618a9">Joint model</h2>
-<div class="outline-text-2" id="text-org1e618a9">
+<div id="outline-container-org78b0ae7" class="outline-2">
+<h2 id="org78b0ae7">Joint model</h2>
+<div class="outline-text-2" id="text-org78b0ae7">
 <div class="org-src-container">
 <pre class="src src-ipython">ed.set_seed(0)
 
@@ -382,9 +382,9 @@ equal to the simulated expression phenotypic variance.</li>
 </div>
 </div>
 
-<div id="outline-container-orgb4a57a3" class="outline-2">
-<h2 id="orgb4a57a3">Variational approximation</h2>
-<div class="outline-text-2" id="text-orgb4a57a3">
+<div id="outline-container-orgd8f0f24" class="outline-2">
+<h2 id="orgd8f0f24">Variational approximation</h2>
+<div class="outline-text-2" id="text-orgd8f0f24">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">q_logodds_w</span> = Normal(loc=tf.Variable(tf.random_normal([1])),
                      scale=tf.Variable(tf.random_normal([1])))
@@ -434,9 +434,9 @@ initial_w, *<span class="org-variable-name">_</span> = scipy.linalg.lstsq(x_ref,
 </div>
 </div>
 
-<div id="outline-container-orga3683a2" class="outline-2">
-<h2 id="orga3683a2">Model fitting</h2>
-<div class="outline-text-2" id="text-orga3683a2">
+<div id="outline-container-org8cf27bb" class="outline-2">
+<h2 id="org8cf27bb">Model fitting</h2>
+<div class="outline-text-2" id="text-org8cf27bb">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-variable-name">inference</span> = ed.ReparameterizationKLKLqp(
     latent_vars={
@@ -463,9 +463,9 @@ inference.run(n_iter=2000, optimizer=<span class="org-string">'rmsprop'</span>)
 </div>
 </div>
 </div>
-<div id="outline-container-org593a383" class="outline-2">
-<h2 id="org593a383">Model evaluation</h2>
-<div class="outline-text-2" id="text-org593a383">
+<div id="outline-container-org3f58991" class="outline-2">
+<h2 id="org3f58991">Model evaluation</h2>
+<div class="outline-text-2" id="text-org3f58991">
 <div class="org-src-container">
 <pre class="src src-ipython"><span class="org-keyword">import</span> matplotlib.gridspec
 <span class="org-keyword">import</span> matplotlib.pyplot <span class="org-keyword">as</span> plt
@@ -518,9 +518,9 @@ plt.close()
 </p>
 </div>
 </div>
-<div id="outline-container-org0ab67c2" class="outline-2">
-<h2 id="org0ab67c2">Conclusions</h2>
-<div class="outline-text-2" id="text-org0ab67c2">
+<div id="outline-container-org16a9e8c" class="outline-2">
+<h2 id="org16a9e8c">Conclusions</h2>
+<div class="outline-text-2" id="text-org16a9e8c">
 <p>
 Including uncorrelated unmediated effects in the model doesn't affect
 inference of mediated effects. This isn't surprising since in this case it's
@@ -532,7 +532,7 @@ residual is uncorrelated with the predictors).
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2017-11-25 Sat 12:07</p>
+<p class="date">Created: 2018-03-18 Sun 19:50</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

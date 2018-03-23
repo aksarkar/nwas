@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- 2018-03-18 Sun 19:50 -->
+<!-- 2018-03-18 Sun 20:48 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hierarchical model in Edward</title>
+<title>Edward stuff</title>
 <meta name="generator" content="Org mode">
 <meta name="author" content="Abhishek Sarkar">
 <style type="text/css">
@@ -227,114 +227,155 @@ for the JavaScript code in this tag.
  }
 /*]]>*///-->
 </script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
 </head>
 <body>
 <div id="content">
-<h1 class="title">Hierarchical model in Edward</h1>
+<h1 class="title">Edward stuff</h1>
+<div id="outline-container-org74b1993" class="outline-2">
+<h2 id="org74b1993">Mixture of regressions</h2>
+<div class="outline-text-2" id="text-org74b1993">
+<p>
+\[ y_i \sim \sum_K \pi_k N(\mu_k + x_i \beta_k, \sigma^2_k) \]
+</p>
 
-<div id="outline-container-org20ca455" class="outline-2">
-<h2 id="org20ca455">Setup</h2>
-<div class="outline-text-2" id="text-org20ca455">
 <div class="org-src-container">
-<pre class="src src-ipython"><span class="org-keyword">import</span> edward <span class="org-keyword">as</span> ed
-<span class="org-keyword">from</span> edward.models <span class="org-keyword">import</span> Normal
-<span class="org-keyword">import</span> numpy <span class="org-keyword">as</span> np
-<span class="org-keyword">import</span> tensorflow <span class="org-keyword">as</span> tf
+<pre class="src src-ipython"><span class="org-variable-name">K</span> = 2
+<span class="org-variable-name">N</span> = 500
+
+np.random.seed(0)
+<span class="org-variable-name">x</span> = np.random.uniform(size=N)
+<span class="org-variable-name">z</span> = np.random.uniform(size=N) &lt; .7
+
+<span class="org-variable-name">w</span> = np.where(z, 1, 5)
+<span class="org-variable-name">w0</span> = np.where(z, 3, 1)
+<span class="org-variable-name">sigma</span> = np.where(z, .2, .3)
+<span class="org-variable-name">y</span> = x * w + w0 + np.random.normal(scale=sigma, size=N)
 </pre>
 </div>
-</div>
-</div>
 
-<div id="outline-container-org7b53c2b" class="outline-2">
-<h2 id="org7b53c2b">Data</h2>
-<div class="outline-text-2" id="text-org7b53c2b">
 <div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">N</span> = 3  <span class="org-comment-delimiter"># </span><span class="org-comment">number of groups</span>
-<span class="org-variable-name">M</span> = 1000  <span class="org-comment-delimiter"># </span><span class="org-comment">samples per group</span>
-
-<span class="org-comment-delimiter"># </span><span class="org-comment">mean for each group is different</span>
-<span class="org-comment-delimiter"># </span><span class="org-comment">want to infer the group means plus the overall mean</span>
-<span class="org-variable-name">actual_group_means</span> = [0.1, 0.2, 0.3]
-<span class="org-variable-name">sigma</span> = 0.1
-
-<span class="org-variable-name">observed_groups</span> = np.repeat([0, 1, 2], M)
-<span class="org-variable-name">samples</span> = [np.random.normal(actual_group_means[g], sigma, M) <span class="org-keyword">for</span> g <span class="org-keyword">in</span> <span class="org-builtin">range</span>(N)]
-<span class="org-variable-name">observed_data</span> = np.concatenate(samples)
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-orged3736a" class="outline-2">
-<h2 id="orged3736a">Model</h2>
-<div class="outline-text-2" id="text-orged3736a">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-variable-name">groups</span> = tf.placeholder(tf.int32, [M * N])
-
-<span class="org-variable-name">overall_mean</span> = Normal(
-  loc=tf.zeros(1), 
-  scale=tf.ones(1) * 0.05
-)
-<span class="org-variable-name">q_overall_mean</span> = Normal(
-  loc=tf.Variable(tf.zeros(1)),
-  scale=tf.nn.softplus(tf.Variable(tf.zeros(1)))
-)
-
-<span class="org-variable-name">group_means</span> = Normal(
-  loc=tf.ones(N) * overall_mean,
-  scale=tf.ones(N) * 0.05
-)
-<span class="org-variable-name">q_group_means</span> = Normal(
-  loc=tf.Variable(tf.zeros(N)),
-  scale=tf.nn.softplus(tf.Variable(tf.zeros(N)))
-)
-
-<span class="org-variable-name">data</span> = Normal(
-  loc=tf.gather(group_means, groups),
-  scale=tf.ones(shape=[N * M]) * sigma
-)
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-orgbf88f96" class="outline-2">
-<h2 id="orgbf88f96">Inference</h2>
-<div class="outline-text-2" id="text-orgbf88f96">
-<div class="org-src-container">
-<pre class="src src-ipython"><span class="org-keyword">for</span> inference_alg <span class="org-keyword">in</span> (ed.ReparameterizationKLqp, ed.ReparameterizationKLKLqp):
-  <span class="org-variable-name">inference</span> = inference_alg(
-    {
-      overall_mean: q_overall_mean,
-      group_means: q_group_means
-    },
-    data={
-      groups: observed_groups,
-      data: observed_data
-    }
-  )
-  inference.run(n_samples=5, n_iter=1000)
-  <span class="org-variable-name">sess</span> = ed.get_session()
-  <span class="org-keyword">print</span>(<span class="org-string">'Using {}:'</span>.<span class="org-builtin">format</span>(inference_alg))
-  <span class="org-keyword">print</span>(q_overall_mean.mean().<span class="org-builtin">eval</span>())
-  <span class="org-keyword">print</span>(q_group_means.mean().<span class="org-builtin">eval</span>())
+<pre class="src src-ipython">plt.clf()
+plt.scatter(x, y, c=z)
 </pre>
 </div>
 
 <pre class="example">
-Using &lt;class 'edward.inferences.klqp.ReparameterizationKLqp'&gt;:
-[ 0.15242636]
-[ 0.08973102  0.20209159  0.30212268]
-Using &lt;class 'edward.inferences.klqp.ReparameterizationKLKLqp'&gt;:
-[ 0.]
-[ 0.07926108  0.18680389  0.30515084]
+&lt;matplotlib.collections.PathCollection at 0x7fea380ff438&gt;
+
 </pre>
+
+<div class="figure">
+<p><img src="data.png" alt="data.png">
+</p>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">ds</span> = tf.contrib.distributions
+
+<span class="org-keyword">class</span> <span class="org-type">_MixtureRegressions</span>(ds.Distribution):
+  <span class="org-keyword">def</span> <span class="org-function-name">__init__</span>(<span class="org-keyword">self</span>, pi, mu, sigma, validate_args=<span class="org-constant">False</span>, allow_nan_stats=<span class="org-constant">False</span>, name=<span class="org-string">'MixtureRegressions'</span>):
+    <span class="org-variable-name">parameters</span> = <span class="org-builtin">locals</span>()
+    <span class="org-keyword">self</span>.pi = tf.identity(pi)
+    <span class="org-keyword">self</span>.mu = tf.identity(mu)
+    <span class="org-keyword">self</span>.sigma = tf.identity(sigma)
+    <span class="org-builtin">super</span>(_MixtureRegressions, <span class="org-keyword">self</span>).__init__(
+      allow_nan_stats=allow_nan_stats,
+      dtype=<span class="org-keyword">self</span>.mu.dtype,
+      graph_parents=[<span class="org-keyword">self</span>.pi, <span class="org-keyword">self</span>.mu, <span class="org-keyword">self</span>.sigma],
+      name=name,
+      parameters=parameters,
+      reparameterization_type=ds.FULLY_REPARAMETERIZED,
+      validate_args=validate_args,
+    )
+
+  <span class="org-keyword">def</span> <span class="org-function-name">_log_prob</span>(<span class="org-keyword">self</span>, y):
+    <span class="org-variable-name">F</span> = -.5 * (tf.log(2 * np.pi * tf.square(<span class="org-keyword">self</span>.sigma)) - tf.square(y - <span class="org-keyword">self</span>.mu) / tf.square(<span class="org-keyword">self</span>.sigma))
+    <span class="org-variable-name">F</span> = <span class="org-keyword">self</span>.pi * F
+    <span class="org-keyword">return</span> F
+
+  <span class="org-keyword">def</span> <span class="org-function-name">_sample_n</span>(<span class="org-keyword">self</span>, n):
+    <span class="org-keyword">raise</span> <span class="org-type">NotImplementedError</span>
+
+<span class="org-keyword">class</span> <span class="org-type">MixtureRegressions</span>(ed.models.RandomVariable, _MixtureRegressions):
+  <span class="org-keyword">def</span> <span class="org-function-name">__init__</span>(<span class="org-keyword">self</span>, *args, **kwargs):
+    ed.models.RandomVariable.__init__(<span class="org-keyword">self</span>, *args, **kwargs)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">x_</span> = tf.Variable(x.reshape(-1, 1).astype(np.float32), trainable=<span class="org-constant">False</span>)
+<span class="org-variable-name">pi</span> = ed.models.Dirichlet(tf.ones([K]))
+<span class="org-variable-name">beta</span> = ed.models.Normal(loc=tf.zeros([1, K]), scale=10 * tf.ones([1, K]))
+<span class="org-variable-name">beta0</span> = ed.models.Normal(loc=tf.zeros([1, K]), scale=10 * tf.ones([1, K]))
+<span class="org-variable-name">sigma_</span> = ed.models.InverseGamma(concentration=tf.ones([1, K]), rate=tf.ones([1, K]))
+<span class="org-variable-name">mu</span> = tf.matmul(x_, beta) + beta0
+<span class="org-variable-name">py</span> = MixtureRegressions(pi, mu, sigma_, value=tf.zeros([N, 1]))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">qbeta</span> = ed.models.NormalWithSoftplusScale(loc=tf.Variable(tf.ones([1, K])), scale=tf.Variable(tf.zeros([1, K])))
+<span class="org-variable-name">qbeta0</span> = ed.models.NormalWithSoftplusScale(loc=tf.Variable(tf.ones([1, K])), scale=tf.Variable(tf.zeros([1, K])))
+<span class="org-variable-name">qsigma</span> = ed.models.InverseGamma(concentration=tf.Variable(tf.ones([1, K])), rate=tf.Variable(tf.ones([1, K])))
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">inf</span> = ed.KLqp(data={py: y.astype(np.float32).reshape(-1, 1)}, latent_vars={beta: qbeta, beta0: qbeta0, sigma_: qsigma})
+inf.run()
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython"><span class="org-variable-name">res</span> = ed.get_session().run([pi.mean(), qbeta.mean(), qbeta0.mean()])
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-ipython">plt.clf()
+plt.scatter(x, y, c=z)
+plt.plot([x.<span class="org-builtin">min</span>(), x.<span class="org-builtin">max</span>()], [res[1][0,0] * x.<span class="org-builtin">min</span>() + res[2][0,0], res[1][0,0] * x.<span class="org-builtin">max</span>() + res[2][0,0]])
+plt.plot([x.<span class="org-builtin">min</span>(), x.<span class="org-builtin">max</span>()], [res[1][0,1] * x.<span class="org-builtin">min</span>() + res[2][0,1], res[1][0,1] * x.<span class="org-builtin">max</span>() + res[2][0,1]])
+</pre>
+</div>
+
+<pre class="example">
+[&lt;matplotlib.lines.Line2D at 0x7fea32c5ff98&gt;]
+
+</pre>
+
+<div class="figure">
+<p><img src="result.png" alt="result.png">
+</p>
+</div>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Abhishek Sarkar</p>
-<p class="date">Created: 2018-03-18 Sun 19:50</p>
+<p class="date">Created: 2018-03-18 Sun 20:48</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

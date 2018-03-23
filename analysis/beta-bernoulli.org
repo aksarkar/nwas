@@ -1,0 +1,64 @@
+#+TITLE: Beta-Bernoulli model
+#+SETUPFILE: setup.org
+
+* Setup
+
+  #+BEGIN_SRC emacs-lisp
+  (org-babel-lob-ingest "~/.emacs.d/org-templates/library.org")
+  #+END_SRC
+
+  #+RESULTS:
+  : 1
+
+  #+CALL: ipython3(venv="nwas", partition="gpu2")
+
+  #+RESULTS:
+  : Submitted batch job 41410125
+
+  #+BEGIN_SRC ipython
+  import edward as ed
+  import numpy as np
+  import tensorflow as tf
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:
+
+* Data
+
+  #+BEGIN_SRC ipython
+    observations = np.random.binomial(n=1, p=0.3, size=(100,))
+    observations.mean()
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  : 0.29999999999999999
+  :END:
+
+* Model  
+
+  #+BEGIN_SRC ipython
+    M = ed.models
+
+    import edward as ed
+    import tensorflow as tf
+    from edward.models import (
+            Beta,
+            Bernoulli,
+            Empirical
+    )
+
+    x_prob = Beta(0.3, 1.0)
+    x = Bernoulli(probs=x_prob)
+
+    qx_prob = Empirical(params=tf.Variable(tf.zeros(1000)))
+
+    inference = ed.HMC({x_prob: qx_prob}, data={x: 1})
+    inference.run()
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  :END:

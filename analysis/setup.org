@@ -7,4 +7,4 @@
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
 #+HTML_HEAD: <style type="text/css">body {width: 60em; margin:auto} pre.src {overflow:auto}</style>
 #+PROPERTY: header-args :eval never-export
-#+PROPERTY: header-args:ipython+ :session kernel-aksarkar.json :results raw drawer
+#+PROPERTY: header-args:ipython+ :session kernel-nwas.json :results raw drawer

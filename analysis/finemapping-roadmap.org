@@ -65,24 +65,24 @@
    than just genetic variation. Yongjin Park and I [[https://www.biorxiv.org/content/early/2017/11/18/219428][developed a method]]
    incorporating some of these ideas.
 
-   But, we can now simply experimentally observe the causal regulatory elements
+   And we can now simply experimentally observe the causal regulatory elements
    for gene expression:
 
-   *Sharpr-MPRA ([[https://www.nature.com/articles/nbt.3678][Ernst et al 2016]])*. Take 295 bp around 14,000 regulatory
-   elements, synthesize luciferase reporters for overlapping 145 bp tiles,
-   infer the causal nucleotide (to within 5 bp) using a Gaussian graphical
-   model
+   - *Sharpr-MPRA ([[https://www.nature.com/articles/nbt.3678][Ernst et al 2016]])*. Take 295 bp around 14,000 regulatory
+     elements, synthesize luciferase reporters for overlapping 145 bp tiles,
+     infer the causal nucleotide (to within 5 bp) using a Gaussian graphical
+     model
 
-   *CRISPRi ([[http://science.sciencemag.org/content/354/6313/769.long][Fulco et al 2016]])*. Use KRAB-dCas9 to alter chromatin state,
-   targetting every base pair in >1 MB around GATA1 and MYC, directly observe
-   the causal nucleotides
+   - *CRISPRi ([[http://science.sciencemag.org/content/354/6313/769.long][Fulco et al 2016]])*. Use KRAB-dCas9 to alter chromatin state,
+     targetting every base pair in >1 MB around GATA1 and MYC, directly observe
+     the causal nucleotides
 
-   *ScanDel ([[http://www.cell.com/ajhg/fulltext/S0002-9297(17)30245-8][Gasperini et al 2017]])*. Use CRISPR to systematically delete every
-   1-2 kb window in 206 kb around HPRT1
+   - *ScanDel ([[http://www.cell.com/ajhg/fulltext/S0002-9297(17)30245-8][Gasperini et al 2017]])*. Use CRISPR to systematically delete
+     every 1-2 kb window in 206 kb around HPRT1
 
-   *HiDRA ([[https://www.biorxiv.org/content/early/2017/09/27/193136][Wang et al 2017]])*. Use ATAC-Seq to enrich for reads from regulatory
-   elements, perform STARR-Seq to test their function, modify the SHARPR
-   algorithm to infer causal nucleotides
+   - *HiDRA ([[https://www.biorxiv.org/content/early/2017/09/27/193136][Wang et al 2017]])*. Use ATAC-Seq to enrich for reads from
+     regulatory elements, perform STARR-Seq to test their function, modify the
+     SHARPR algorithm to infer causal nucleotides
 
    So, the interesting problem that needs to be solved is not calibrating PIPs
    for cis-eQTLs in GTEx, but finding new creative ways to interrogate
