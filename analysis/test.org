@@ -13,7 +13,7 @@
   #+CALL: ipython3(venv="nwas", partition="gpu2") :exports none
 
   #+RESULTS:
-  : Submitted batch job 44451965
+  : Submitted batch job 44487690
 
   #+BEGIN_SRC ipython
     %matplotlib inline
@@ -21,12 +21,13 @@
     import edward as ed
     import matplotlib.pyplot as plt
     import numpy as np
+    import scipy.special as sp
     import tensorflow as tf
   #+END_SRC
 
   #+RESULTS:
   :RESULTS:
-  # Out[1]:
+  # Out[8]:
   :END:
 
 * Learn directed Bayesian network
@@ -672,4 +673,137 @@
     array([ 2.3322289,  2.3039763], dtype=float32),
     array([ 2.00949097,  2.00899529], dtype=float32)]
   #+END_EXAMPLE
+  :END:
+* Logistic
+
+  #+BEGIN_SRC ipython
+    from edward.models import *
+
+    ed.get_session().close()
+    tf.reset_default_graph()
+    ed.set_seed(0)
+
+    N = 40
+    D = 1
+    T = 5000
+    noise_std = 0.1
+
+    np.random.seed(0)
+    X = (np.random.uniform(size=(N)) - 0.5) * 100
+    w0 = np.full((D), 1.0, np.float64)
+    b0 = 2.0
+    y = np.multiply(X, w0) + b0 + np.random.normal(0, noise_std, size=N)
+    y = sp.expit(y)
+    threshold = np.random.uniform(size=(N))
+    y = np.less(threshold, y)
+    y = y.astype(int)
+    X = X.reshape((N, D))
+
+    X_ph = tf.placeholder(tf.float32, [N, D])
+    w = Normal(loc=tf.zeros([D]), scale=3 * tf.ones([D]))
+    b = Normal(loc=tf.zeros([]), scale=3 * tf.ones([]))
+    py = Bernoulli(logits=ed.dot(X_ph, w) + b)
+
+    # INFERENCE
+    qw = Empirical(params=tf.Variable(tf.random_normal([T, D])))
+    qb = Empirical(params=tf.Variable(tf.random_normal([T])))
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  # Out[48]:
+  :END:
+
+  #+BEGIN_SRC ipython
+    inference = ed.HMC({w: qw, b: qb}, data={X_ph: X, py: y})
+    inference.run()
+    ed.get_session().run([qw.mean(), qw.variance(), qb.mean(), qb.variance()])
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  # Out[49]:
+  #+BEGIN_EXAMPLE
+    [array([ 2.9295218], dtype=float32),
+    array([ 2.47083402], dtype=float32),
+    0.16772978,
+    7.0047565]
+  #+END_EXAMPLE
+  :END:
+
+  #+BEGIN_SRC ipython :ipyfile bern.svg
+    plt.clf()
+    plt.scatter(X, y)
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  # Out[56]:
+  : <matplotlib.collections.PathCollection at 0x7fe6bc5cfe48>
+  [[file:bern.svg]]
+  :END:
+* Residual variance
+
+  #+BEGIN_SRC ipython
+    ed.get_session().close()
+    tf.reset_default_graph()
+    Normal = ed.models.Normal
+
+    def build_toy_dataset(N, w, noise_sd=0.1, data_sd=1):
+        D = len(w)
+        x = np.random.normal(0, data_sd, size=(N, D))
+        y = np.dot(x, w) + np.random.normal(0, noise_sd, size=N)
+        return x, y
+
+
+    ### Generate the data
+    # Note that data_sd >> noise_sd
+    N = 1000
+    D = 5
+
+    w_true = np.random.randn(D)
+    noise_sd = 0.1
+    data_sd = 5
+    X_train, y_train = build_toy_dataset(N, w_true, noise_sd=noise_sd, data_sd=data_sd)
+
+
+    ### Define the model
+    X = tf.placeholder(tf.float32, [N, D])
+    w = Normal(loc=tf.zeros(D), scale=tf.ones(D))
+    b = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+    log_sd = Normal(loc=tf.zeros(1), scale=tf.ones(1))
+    y = Normal(loc=ed.dot(X, w) + b, scale=tf.exp(log_sd))
+
+    qw = Normal(loc=tf.get_variable("qw/loc", [D]),
+                scale=tf.nn.softplus(tf.get_variable("qw/scale", [D])))
+    qb = Normal(loc=tf.get_variable("qb/loc", [1]),
+                scale=tf.nn.softplus(tf.get_variable("qb/scale", [1])))
+    qlog_sd = Normal(loc=tf.get_variable("qlog_sd/loc", [1]),
+                scale=tf.nn.softplus(tf.get_variable("qlog_sd/scale", [1])))
+
+
+    ### Variational Inference
+    # Many samples and iterations, just to go sure
+    inference = ed.ReparameterizationKLKLqp({w: qw, b: qb, log_sd: qlog_sd}, data={X: X_train, y: y_train})
+    inference.run()
+
+
+    ### Print estimates
+    sess = ed.get_session()
+
+    # w is unbiased...
+    print("w hat: {}".format(sess.run(qw.mean())))
+    print("w true: {}".format(w_true))
+
+    # sd is overestimated..
+    print("sd hat: {}".format(sess.run(tf.exp(qlog_sd.mean()))))
+    print("sd true: {}".format(noise_sd))
+
+    print('sd CI: {}'.format(sess.run([tf.exp(qlog_sd.mean() - 1.96 * qlog_sd.stddev()),
+       tf.exp(qlog_sd.mean() + 1.96 * qlog_sd.stddev())])))
+  #+END_SRC
+
+  #+RESULTS:
+  :RESULTS:
+  # Out[10]:
   :END:
